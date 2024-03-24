@@ -5,6 +5,5 @@ import (
 )
 
 func main() {
-	cart := &lib.Cart{}
-	cart.LoadCart()
+	lib.Run()
 }

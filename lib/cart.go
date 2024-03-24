@@ -71,3 +71,4 @@ func (c *Cart) LoadCart() {
 	fmt.Printf("Rom Version: %x\n", myCart.Header.MaskRomVersion)
 
 }
+
