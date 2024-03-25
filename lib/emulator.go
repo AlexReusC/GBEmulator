@@ -1,8 +1,12 @@
 package lib
 
 func Run() {
-	cart := &Cart{}
-	cart.LoadCart()
+	cart, err := LoadCart()
+	if err != nil {
+		return
+	}
+
+	bus := &Bus{}
 
 	cpu, err := LoadCpu()
 	if err != nil {
@@ -10,7 +14,7 @@ func Run() {
 	}
 
 	for {
-		cpu.Step()
+		cpu.Step(bus, cart)
 	}
 
 }

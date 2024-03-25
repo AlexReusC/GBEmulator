@@ -1,5 +1,7 @@
 package lib
 
+import "fmt"
+
 type registers struct {
 	a  uint8
 	b  uint8
@@ -23,6 +25,8 @@ func LoadCpu() (*CPU, error) {
 	return c, nil
 }
 
-func (c *CPU) Step() {
-
+func (cpu *CPU) Step(b *Bus, cart *Cart) {
+	opcode := b.BusRead(cpu.Register.pc, cart)
+	fmt.Printf("Opcode: %x, Pc: %x\n", opcode, cpu.Register.pc)
+	cpu.Register.pc += 1
 }

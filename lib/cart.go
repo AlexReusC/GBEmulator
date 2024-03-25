@@ -25,23 +25,23 @@ type header struct {
 type Cart struct{
 	Header header
 	Length int64
-	Rom []byte
+	Rom []uint8
 }
 
-func (c *Cart) LoadCart() {
+func LoadCart() (*Cart, error) {
 	file, err := os.Open("./roms/dmg-acid2.gb")
 	if err != nil{
 		fmt.Println("Failed to open")
-		return
+		return nil, err
 	}
 	defer file.Close()
 
-	myCart := Cart{}
+	myCart := &Cart{}
 
 	fi, err := file.Stat()
 	if err != nil {
 		fmt.Println("Couldn't get info")
-		return
+		return nil, err
 	}
 	myCart.Length = fi.Size()
 
@@ -50,15 +50,15 @@ func (c *Cart) LoadCart() {
 	cartHeader := header{}
 	if err := binary.Read(file, binary.LittleEndian, &cartHeader); err != nil {
 		fmt.Println("Invalid header")
-		return
+		return nil, err
 	}
 	myCart.Header = cartHeader
 	file.Seek(0, 0)
 
-	cartRom := make([]byte, myCart.Length)	
+	cartRom := make([]uint8, myCart.Length)	
 	if err := binary.Read(file, binary.LittleEndian, &cartRom); err != nil {
 		fmt.Println("Invalid rom", err)
-		return
+		return nil, err
 	}
 	myCart.Rom = cartRom
 
@@ -69,6 +69,12 @@ func (c *Cart) LoadCart() {
 	fmt.Printf("Ram: %x\n", myCart.Header.RamSize)
 	fmt.Printf("Lic Code: %x\n", myCart.Header.OldLicenseeCode)
 	fmt.Printf("Rom Version: %x\n", myCart.Header.MaskRomVersion)
+	//fmt.Printf("Rom: %x\n", myCart.Rom)
+
+	return myCart, nil
 
 }
 
+func (c *Cart) CartRead(a uint16) uint8 {
+	return c.Rom[a]
+}
