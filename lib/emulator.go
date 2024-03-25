@@ -1,5 +1,7 @@
 package lib
 
+import "fmt"
+
 func Run() {
 	cart, err := LoadCart()
 	if err != nil {
@@ -14,7 +16,10 @@ func Run() {
 	}
 
 	for {
-		cpu.Step(bus, cart)
+		err := cpu.Step(bus, cart)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 
 }

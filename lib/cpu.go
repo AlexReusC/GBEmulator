@@ -1,6 +1,9 @@
 package lib
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type registers struct {
 	a  uint8
@@ -25,8 +28,23 @@ func LoadCpu() (*CPU, error) {
 	return c, nil
 }
 
-func (cpu *CPU) Step(b *Bus, cart *Cart) {
+func (c *CPU) proc_nop(){
+
+}
+
+func (cpu *CPU) Step(b *Bus, cart *Cart) error {
 	opcode := b.BusRead(cpu.Register.pc, cart)
 	fmt.Printf("Opcode: %x, Pc: %x\n", opcode, cpu.Register.pc)
 	cpu.Register.pc += 1
+	switch opcode {
+		case 0x00:
+			cpu.proc_nop()
+		case 0xAF:
+			proc_xor()
+		case 0xC3:
+			proc_jp()
+		default:
+			return errors.New("invalid instruction")
+	}
+	return nil
 }
