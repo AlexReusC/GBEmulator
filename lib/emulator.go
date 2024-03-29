@@ -8,7 +8,10 @@ func Run() {
 		return
 	}
 
-	bus := &Bus{}
+	bus, err := LoadBus(cart)
+	if err != nil {
+		return
+	}
 
 	cpu, err := LoadCpu()
 	if err != nil {
@@ -16,9 +19,10 @@ func Run() {
 	}
 
 	for {
-		err := cpu.Step(bus, cart)
+		err := cpu.Step(bus)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 	}
 

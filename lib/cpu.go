@@ -28,21 +28,32 @@ func LoadCpu() (*CPU, error) {
 	return c, nil
 }
 
-func (c *CPU) proc_nop(){
-
+func (c *CPU) nop_00(){
+	fmt.Println("NOP INSTRUCTION")
 }
 
-func (cpu *CPU) Step(b *Bus, cart *Cart) error {
-	opcode := b.BusRead(cpu.Register.pc, cart)
+func (c *CPU) xor_AF(){
+	fmt.Println("NOP INSTRUCTION")
+}
+
+func (c *CPU) jp_C3(b *Bus){
+	lo := uint16(b.BusRead(c.Register.pc))
+	hi := uint16(b.BusRead(c.Register.pc+1))
+	a := hi << 8 | lo
+	c.Register.pc = a
+}
+
+func (cpu *CPU) Step(b *Bus) error {
+	opcode := b.BusRead(cpu.Register.pc)
 	fmt.Printf("Opcode: %x, Pc: %x\n", opcode, cpu.Register.pc)
 	cpu.Register.pc += 1
 	switch opcode {
 		case 0x00:
-			cpu.proc_nop()
+			cpu.nop_00()
 		case 0xAF:
-			proc_xor()
+			cpu.xor_AF()
 		case 0xC3:
-			proc_jp()
+			cpu.jp_C3(b)
 		default:
 			return errors.New("invalid instruction")
 	}

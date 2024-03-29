@@ -1,11 +1,18 @@
 package lib
 
 type Bus struct {
+	cart *Cart
 }
 
-func (b *Bus) BusRead(a uint16, c *Cart) uint8 {
+func LoadBus(c *Cart) (*Bus, error) {
+	b := &Bus{cart: c}
+
+	return b, nil
+}
+
+func (b *Bus) BusRead(a uint16) uint8 {
 	if a < 0x0800 {
-		return c.CartRead(a)
+		return b.cart.CartRead(a)
 	}
 
 	return 0x0000
