@@ -29,7 +29,9 @@ type Cart struct{
 }
 
 func LoadCart() (*Cart, error) {
-	file, err := os.Open("./roms/dmg-acid2.gb")
+	//file, err := os.Open("./roms/dmg-acid2.gb")
+	file, err := os.Open("./roms/mem_timing.gb")
+
 	if err != nil{
 		fmt.Println("Failed to open")
 		return nil, err

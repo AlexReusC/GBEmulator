@@ -5,6 +5,7 @@ import "errors"
 type inType int
 type adType int
 type condType int
+type targetType int
 
 const (
 	in_Nop inType = iota
@@ -18,6 +19,10 @@ const (
 )
 
 const (
+	target_A targetType = iota
+)
+
+const (
 	cond_None condType = iota
 	cond_C
 	cond_NC
@@ -26,8 +31,8 @@ const (
 )
 
 func checkCond(cpu *CPU, ct condType) (bool, error) {
-	c := cpu.getFlag(c)
-	z := cpu.getFlag(z)
+	c := cpu.GetFlag(cf)
+	z := cpu.GetFlag(zf)
 
 	switch ct {
 	case cond_None:
@@ -48,10 +53,12 @@ func checkCond(cpu *CPU, ct condType) (bool, error) {
 type Instruction struct {
 	InstructionType inType
 	AddressMode     adType
+	Source			*targetType
+	Destination		*targetType
 	ConditionType   condType
 }
 
 var instructions = map[uint8]Instruction{
-	0x00: {in_Nop, am_Imp, cond_None},
-	0xC3: {in_Jp, am_N16, cond_None},
+	0x00: {in_Nop, am_Imp, nil, nil, cond_None},
+	0xC3: {in_Jp, am_N16, nil, nil, cond_None},
 }
