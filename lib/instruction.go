@@ -14,8 +14,15 @@ const (
 )
 
 const (
-	am_N16 adType = iota
+	am_D16 adType = iota
 	am_Imp
+	am_Mr_R
+	am_R_Mr
+	am_R_HlI
+	am_R_HlD
+	am_HlI_R
+	am_HlD_R
+
 )
 
 const (
@@ -60,5 +67,5 @@ type Instruction struct {
 
 var instructions = map[uint8]Instruction{
 	0x00: {in_Nop, am_Imp, nil, nil, cond_None},
-	0xC3: {in_Jp, am_N16, nil, nil, cond_None},
+	0xC3: {in_Jp, am_D16, nil, nil, cond_None},
 }

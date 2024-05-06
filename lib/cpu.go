@@ -33,7 +33,7 @@ type CPU struct {
 }
 
 func LoadCpu() (*CPU, error) {
-	c := &CPU{Register: registers{pc: 0x0100}}
+	c := &CPU{Register: registers{pc: 0x0100, a: 0x01}}
 
 	return c, nil
 }
@@ -92,10 +92,16 @@ func (cpu *CPU) Step(b *Bus) error {
 	switch instruction.AddressMode {
 	case am_Imp:
 		break
-	case am_N16:
+	case am_D16:
 		lo := uint16(b.BusRead(cpu.Register.pc))
 		hi := uint16(b.BusRead(cpu.Register.pc+1))
 		cpu.CurrentData = hi << 8 | lo
+		cpu.Register.pc += 2
+	case am_R_HlI:
+		cpu.CurrentData = uint16(b.BusRead(getRegister(instruction.Source)))
+	case am_R_HlD: 
+	case am_HlI_R:
+	case am_HlD_R:
 	}
 
 	//Conditional mode
