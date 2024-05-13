@@ -66,6 +66,23 @@ func (c *CPU) SetFlags(flagZ int, flagN int, flagH int, flagC int) {
 	}
 } 
 
+func (c *CPU) GetRegister(t *targetType) (uint16, error) {
+	if t == nil {
+		return 0, errors.New("Instruction with no target type")
+	}
+
+	switch *t {
+		case  target_A:
+			return uint16(c.Register.a), nil
+		default:
+			return 0, errors.New("Unknown target type")
+	}
+}
+
+func (c *CPU) SetRegister() error {
+
+}
+
 func (c *CPU) Nop(){
 }
 
@@ -92,13 +109,33 @@ func (cpu *CPU) Step(b *Bus) error {
 	switch instruction.AddressMode {
 	case am_Imp:
 		break
+	case am_R:
+		sourceRegister, err := cpu.GetRegister(instruction.Source) 
+		if err != nil {
+			return err
+		}
+		cpu.CurrentData = sourceRegister
+	case am_R_R:
+		targetRegister, err := cpu.GetRegister(instruction.Destination) 
+		if err != nil {
+			return err
+		}
+		cpu.CurrentData = targetRegister
+	case am_R_D16:
 	case am_D16:
 		lo := uint16(b.BusRead(cpu.Register.pc))
 		hi := uint16(b.BusRead(cpu.Register.pc+1))
 		cpu.CurrentData = hi << 8 | lo
 		cpu.Register.pc += 2
 	case am_R_HlI:
-		cpu.CurrentData = uint16(b.BusRead(getRegister(instruction.Source)))
+		destinationRegister, err := cpu.GetRegister(instruction.Destination)
+		if err != nil{
+			return err
+		}
+		cpu.CurrentData = destinationRegister
+		cpu.setRegister()
+
+		
 	case am_R_HlD: 
 	case am_HlI_R:
 	case am_HlD_R:

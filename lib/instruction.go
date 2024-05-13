@@ -15,6 +15,9 @@ const (
 
 const (
 	am_D16 adType = iota
+	am_R_D16
+	am_R
+	am_R_R
 	am_Imp
 	am_Mr_R
 	am_R_Mr
@@ -27,6 +30,13 @@ const (
 
 const (
 	target_A targetType = iota
+	target_B
+	target_C
+	target_D
+	target_E
+	target_F
+	target_H
+	target_L
 )
 
 const (
@@ -57,6 +67,7 @@ func checkCond(cpu *CPU, ct condType) (bool, error) {
 	}
 } 
 
+// TODO: fix and destination are the other way around
 type Instruction struct {
 	InstructionType inType
 	AddressMode     adType
