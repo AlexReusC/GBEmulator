@@ -11,22 +11,9 @@ const (
 	in_Nop inType = iota
 	in_Xor
 	in_Jp
+	in_Add
 )
 
-const (
-	am_D16 adType = iota
-	am_R_D16
-	am_R
-	am_R_R
-	am_Imp
-	am_Mr_R
-	am_R_Mr
-	am_R_HlI
-	am_R_HlD
-	am_HlI_R
-	am_HlD_R
-
-)
 
 const (
 	target_A targetType = iota
@@ -37,6 +24,8 @@ const (
 	target_F
 	target_H
 	target_L
+	target_A16
+	target_None
 )
 
 const (
@@ -70,13 +59,13 @@ func checkCond(cpu *CPU, ct condType) (bool, error) {
 // TODO: fix and destination are the other way around
 type Instruction struct {
 	InstructionType inType
-	AddressMode     adType
-	Source			*targetType
-	Destination		*targetType
+	Destination		targetType
+	Source			targetType
 	ConditionType   condType
 }
 
 var instructions = map[uint8]Instruction{
-	0x00: {in_Nop, am_Imp, nil, nil, cond_None},
-	0xC3: {in_Jp, am_D16, nil, nil, cond_None},
+	0x00: {in_Nop, target_None, target_None, cond_None},
+	0xC3: {in_Jp, target_None, target_None, cond_None},
+	0x80: {in_Add, target_B, target_A, cond_None},
 }
