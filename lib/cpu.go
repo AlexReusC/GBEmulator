@@ -27,9 +27,29 @@ type registers struct {
 	pc uint16
 }
 
+type size = int
+
+const (
+	u16 size = iota
+	u8
+	undefined
+)
+
+type Data struct {
+	Value uint16
+	IsAddr bool
+	Length size
+}
+
 type CPU struct {
 	Register registers
-	CurrentData uint16
+
+	Source Data
+	Destination Data
+	DestinationTarget targetType
+
+	CurrentConditionResult bool
+	InterruptorMasterEnabled bool
 }
 
 func LoadCpu() (*CPU, error) {
@@ -66,45 +86,82 @@ func (c *CPU) SetFlags(flagZ int, flagN int, flagH int, flagC int) {
 	}
 } 
 
-func (c *CPU) GetTarget(t targetType, b *Bus) (uint16, error) {
+func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 	switch t {
 		case  target_A:
-			return uint16(c.Register.a), nil
-		case target_A16:
+			return Data{uint16(c.Register.a), false, u8}, nil
+		case target_nn:
 			lo := uint16(b.BusRead(c.Register.pc))
 			hi := uint16(b.BusRead(c.Register.pc+1))
 			c.Register.pc += 2
-			return (hi << 8 | lo), nil
+			return Data{(hi << 8 | lo), false, u16}, nil
 		case target_None:
-			return 0, nil
+			return Data{0, false, undefined}, nil
+		// TODO: Other targets
 		default:
-			return 0, errors.New("unknown target type")
+			return Data{0, false, undefined}, errors.New("unknown target type")
 	}
 } 
 
-func (c *CPU) SetRegister() error {
-	return errors.New("")
+func (c *CPU) SetRegister(t targetType, v uint16)  {
+	switch t {
+
+	}
 }
 
 func (c *CPU) Nop(){
 }
 
 func (c *CPU) Xor(){
-	c.Register.a ^= uint8(c.CurrentData & 0xFF)
+	c.Register.a ^= uint8(c.Destination.Value & 0xFF)
 	c.SetFlags(int(c.Register.a), -1, -1, -1)
 }
 
 func (c *CPU) Jp(){
-	c.Register.pc = c.CurrentData
+	if c.CurrentConditionResult{
+		c.Register.pc = c.Destination.Value
+		//cycles(1)
+	}
 }
 
 func (c *CPU) Add() {
 
 }
 
+func (c *CPU) Di() {
+	c.InterruptorMasterEnabled = false
+}
+
+func (c *CPU) Ld8(b *Bus) {
+	var sourceVal uint8
+
+	if c.Source.IsAddr{
+		sourceVal = b.BusRead(c.Source.Value)
+	}else{
+		sourceVal = uint8(c.Source.Value)
+	}
+
+	if c.Destination.IsAddr{
+		b.BusWrite(c.Destination.Value, sourceVal)
+	} else{
+		c.SetRegister(c.DestinationTarget, uint16(sourceVal))
+	}
+
+	//TODO: (HL) SP+e instruction
+}
+
+func (c *CPU) Ld16(b *Bus){
+ 	//Ld16 has no addresses in load
+	if c.Destination.IsAddr{
+		b.BusWrite16(c.Destination.Value,  c.Source.Value)
+	}else{
+		c.SetRegister(c.DestinationTarget, c.Source.Value)
+	}
+}
+
 func (cpu *CPU) Step(b *Bus) error {
 	opcode := b.BusRead(cpu.Register.pc)
-	fmt.Printf("Opcode: %x, Pc: %x\n", opcode, cpu.Register.pc)
+	fmt.Printf("Pc: %x, (%x %x %x) -> ", cpu.Register.pc, opcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
 	instruction, ok := instructions[opcode]
 	if !ok {
 		return errors.New("opcode not implemented")
@@ -113,12 +170,26 @@ func (cpu *CPU) Step(b *Bus) error {
 	cpu.Register.pc += 1
 
 	//Get source
-	registerData, err := cpu.GetTarget(instruction.Source, b)
+	data, err := cpu.GetTarget(instruction.Source, b)
 	if err != nil{
 		return err
 	}
-	cpu.CurrentData = registerData
+	cpu.Source = data
+
+	//Get destination
+	data, err = cpu.GetTarget(instruction.Destination, b)
+	if err != nil{
+		return err
+	}
+	cpu.Destination = data
+
 	//Conditional mode
+	currentCondition := instruction.ConditionType
+	conditionResult, err := cpu.checkCond(currentCondition)
+	if err != nil{
+		return err
+	}
+	cpu.CurrentConditionResult = conditionResult
 
 	//Instruction type
 	switch instruction.InstructionType {
@@ -128,6 +199,12 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Xor()
 		case in_Jp:
 			cpu.Jp()
+		case in_Di:
+			cpu.Di()
+		case in_Ld8:
+			cpu.Ld8(b)
+		case in_Ld16:
+			cpu.Ld16(b)
 		default:
 			return errors.New("invalid instruction")
 	}

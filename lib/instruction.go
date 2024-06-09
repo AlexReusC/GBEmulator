@@ -12,6 +12,9 @@ const (
 	in_Xor
 	in_Jp
 	in_Add
+	in_Di
+	in_Ld8
+	in_Ld16
 )
 
 
@@ -24,7 +27,7 @@ const (
 	target_F
 	target_H
 	target_L
-	target_A16
+	target_nn
 	target_None
 )
 
@@ -36,7 +39,7 @@ const (
 	cond_NZ
 )
 
-func checkCond(cpu *CPU, ct condType) (bool, error) {
+func (cpu *CPU) checkCond( ct condType) (bool, error) {
 	c := cpu.GetFlag(cf)
 	z := cpu.GetFlag(zf)
 
@@ -66,6 +69,8 @@ type Instruction struct {
 
 var instructions = map[uint8]Instruction{
 	0x00: {in_Nop, target_None, target_None, cond_None},
-	0xC3: {in_Jp, target_None, target_None, cond_None},
+	0xC3: {in_Jp, target_nn, target_None, cond_None},
 	0x80: {in_Add, target_B, target_A, cond_None},
+	0xF3: {in_Di, target_None, target_None, cond_None},
+	//TODO: More instructions
 }
