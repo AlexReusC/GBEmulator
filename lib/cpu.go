@@ -90,6 +90,8 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 	switch t {
 		case  target_A:
 			return Data{uint16(c.Register.a), false, u8}, nil
+		case target_SP:
+			return Data{c.Register.sp, false, u16}, nil
 		case target_nn:
 			lo := uint16(b.BusRead(c.Register.pc))
 			hi := uint16(b.BusRead(c.Register.pc+1))
@@ -105,7 +107,12 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 
 func (c *CPU) SetRegister(t targetType, v uint16)  {
 	switch t {
+		case target_SP:
+			c.Register.sp = v
 
+		default:
+			fmt.Println("Unknown register for setting")
+			panic(0)
 	}
 }
 
@@ -119,7 +126,7 @@ func (c *CPU) Xor(){
 
 func (c *CPU) Jp(){
 	if c.CurrentConditionResult{
-		c.Register.pc = c.Destination.Value
+		c.Register.pc = c.Source.Value
 		//cycles(1)
 	}
 }
@@ -166,7 +173,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
-	fmt.Printf("Instruction: %x, Destination: %x, Source: %x\n", instruction.InstructionType, instruction.Destination, instruction.Source)
+	fmt.Printf("Instruction: %x, Destination: %d, Source: %d\n", instruction.InstructionType, instruction.Destination, instruction.Source)
 	cpu.Register.pc += 1
 
 	//Get source
@@ -182,6 +189,9 @@ func (cpu *CPU) Step(b *Bus) error {
 		return err
 	}
 	cpu.Destination = data
+	if !cpu.Destination.IsAddr {
+		cpu.DestinationTarget = instruction.Destination
+	}
 
 	//Conditional mode
 	currentCondition := instruction.ConditionType

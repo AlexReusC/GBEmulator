@@ -1,5 +1,7 @@
 package lib
 
+import "fmt"
+
 type Bus struct {
 	cart *Cart
 }
@@ -16,12 +18,16 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 
 	//TODO: more reads
-
+	fmt.Println("Bus read ot implemented")
 	return 0x0000
 }
 
 func (b *Bus) BusWrite(a uint16, v uint8) {
+	if a < 0x0800 {
+		b.cart.CartWrite(a, v)
+	}
 
+	fmt.Println("Bus write not implemented")
 }
 
 func (b *Bus) BusRead16(a uint16) uint16 {

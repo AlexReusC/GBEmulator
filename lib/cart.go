@@ -80,3 +80,8 @@ func LoadCart() (*Cart, error) {
 func (c *Cart) CartRead(a uint16) uint8 {
 	return c.Rom[a]
 }
+
+func (c *Cart) CartWrite(a uint16, val uint8) {
+	fmt.Println("Cart write not implemented")
+	//TODO
+}
