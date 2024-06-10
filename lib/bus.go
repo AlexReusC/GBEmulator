@@ -20,15 +20,17 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	return 0x0000
 }
 
-func (b *Bus) BusRead16(a uint16) uint16 {
-	//TODO
-	return 0
+func (b *Bus) BusWrite(a uint16, v uint8) {
+
 }
 
-func (b *Bus) BusWrite(a uint16, v uint8) {
-	//TODO
+func (b *Bus) BusRead16(a uint16) uint16 {
+	lo := uint16(b.BusRead(a))
+	hi := uint16(b.BusRead(a + 1))
+	return (hi << 8) | lo
 }
 
 func (b *Bus) BusWrite16(a uint16, v uint16) {
-	//TODO
+	b.BusWrite(a+1, uint8((v>>8)&0xFF))
+	b.BusWrite(a, uint8(v&0xFF))
 }
