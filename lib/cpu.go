@@ -168,12 +168,12 @@ func (c *CPU) Ld16(b *Bus){
 
 func (cpu *CPU) Step(b *Bus) error {
 	opcode := b.BusRead(cpu.Register.pc)
-	fmt.Printf("Pc: %x, (%x %x %x) -> ", cpu.Register.pc, opcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
+	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, opcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
 	instruction, ok := instructions[opcode]
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
-	fmt.Printf("Instruction: %x, Destination: %d, Source: %d\n", instruction.InstructionType, instruction.Destination, instruction.Source)
+	fmt.Printf("Instruction: %s, Destination: %s, Source: %s\n", instruction.InstructionType, instruction.Destination, instruction.Source)
 	cpu.Register.pc += 1
 
 	//Get source

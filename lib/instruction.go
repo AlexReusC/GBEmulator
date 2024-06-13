@@ -2,52 +2,50 @@ package lib
 
 import "errors"
 
-type inType int
-type adType int
-type condType int
-type targetType int
+type inType string 
+type condType string
+type targetType string
 
 const (
-	in_Nop inType = iota
-	in_Xor
-	in_Jp
-	in_Add
-	in_Di
-	in_Ld8
-	in_Ld16
-)
-
-
-const (
-	target_A targetType = iota
-	target_B
-	target_C
-	target_D
-	target_E
-	target_F
-	target_H
-	target_L
-	target_BC
-	target_DE
-	target_HL
-	target_SP
-	target_n
-	target_nn
-	target_BC_M
-	target_DE_M
-	target_HL_M
-	target_HLP_M
-	target_HLM_M
-	target_nn_M
-	target_None
+	in_Nop inType	 	= "Nop"
+	in_Xor inType		= "Xor"
+	in_Jp inType		= "Jp"
+	in_Add inType		= "Add"
+	in_Di inType		= "Di"
+	in_Ld8 inType		= "Ld8"
+	in_Ld16 inType		= "Ld16"
 )
 
 const (
-	cond_None condType = iota
-	cond_C
-	cond_NC
-	cond_Z
-	cond_NZ
+	target_A targetType 		= "A"
+	target_B targetType			= "B"
+	target_C targetType			= "C"
+	target_D targetType			= "D"
+	target_E targetType			= "E"
+	target_F targetType			= "F"
+	target_H targetType			= "H"
+	target_L targetType			= "L"
+	target_BC targetType		= "BC"
+	target_DE targetType		= "DE"
+	target_HL targetType		= "HL"
+	target_SP targetType		= "SP"
+	target_n targetType			= "n"
+	target_nn targetType		= "nn"
+	target_BC_M targetType		= "BC-M"
+	target_DE_M targetType		= "DE-M"
+	target_HL_M targetType		= "HL-M"
+	target_HLP_M targetType		= "HLP-M"
+	target_HLM_M targetType		= "HLM-M"
+	target_nn_M targetType		= "nn-;"
+	target_None targetType		= "none"
+)
+
+const (
+	cond_None condType	= "None"
+	cond_C condType		= "C"
+	cond_NC condType	= "NC"
+	cond_Z condType		= "Z"
+	cond_NZ condType	= "NZ"
 )
 
 func (cpu *CPU) checkCond( ct condType) (bool, error) {
