@@ -36,7 +36,7 @@ const (
 	target_HL_M targetType		= "HL-M"
 	target_HLP_M targetType		= "HLP-M"
 	target_HLM_M targetType		= "HLM-M"
-	target_nn_M targetType		= "nn-;"
+	target_nn_M targetType		= "nn-M;"
 	target_None targetType		= "none"
 )
 

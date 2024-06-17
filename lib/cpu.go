@@ -97,6 +97,10 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 			hi := uint16(b.BusRead(c.Register.pc+1))
 			c.Register.pc += 2
 			return Data{(hi << 8 | lo), false, u16}, nil
+		case target_nn_M:
+			nn := b.BusRead16(c.Register.pc)
+			c.Register.pc += 2
+			return Data{nn, true, u16}, nil
 		case target_None:
 			return Data{0, false, undefined}, nil
 		// TODO: Other targets

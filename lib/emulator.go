@@ -8,7 +8,12 @@ func Run() {
 		return
 	}
 
-	bus, err := LoadBus(cart)
+	ram, err := LoadRam()
+	if err != nil {
+		return
+	}
+
+	bus, err := LoadBus(cart, ram)
 	if err != nil {
 		return
 	}
