@@ -5,10 +5,11 @@ import "fmt"
 type Bus struct {
 	cart *Cart
 	ram *Ram
+	cpu *CPU
 }
 
-func LoadBus(c *Cart, r *Ram) (*Bus, error) {
-	b := &Bus{cart: c, ram: r}
+func LoadBus(rb *Cart, rm *Ram, c *CPU) (*Bus, error) {
+	b := &Bus{cart: rb, ram: rm, cpu: c}
 
 	return b, nil
 }
@@ -20,7 +21,8 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// Video RAM 
 	if a < 0xA000 {
-		fmt.Println("Bus read not implemented")
+		fmt.Println("Bus read not implemented", a)
+		panic(0)
 		return 0x0000
 	}
 	// Cartridge/external RAM
@@ -37,7 +39,8 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// Object attribute memory 
 	if a < 0xFEA0 {
-		fmt.Println("Bus read not implemented")
+		fmt.Println("Bus read not implemented", a)
+		panic(0)
 		return 0 //TODO
 	}
 	// Reserved (prohibited)
@@ -46,7 +49,8 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// IO registers
 	if a < 0xFF80 {
-		fmt.Println("Bus read not implemented")
+		fmt.Println("Bus read not implemented", a)
+		panic(0)
 		return 0 //TODO
 	}
 	// High RAM
@@ -55,8 +59,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
-		fmt.Println("Bus read not implemented")
-		return 0	//TODO
+		return b.cpu.GetIeRegister()
 	}
 	return 0
 }
@@ -66,7 +69,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 		b.cart.CartWrite(a, v)
 	}	// Video RAM 
 	if a < 0xA000 {
-		fmt.Println("Bus read not implemented")
+		fmt.Printf("Bus write not implemented %x\n", a)
+		panic(0)
 		return 
 	}
 	// Cartridge/external RAM
@@ -85,7 +89,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// Object attribute memory 
 	if a < 0xFEA0 {
-		fmt.Println("Bus read not implemented")
+		fmt.Printf("Bus write not implemented %x\n", a)
+		panic(0)
 		return //TODO
 	}
 	// Reserved (prohibited)
@@ -94,7 +99,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// IO registers
 	if a < 0xFF80 {
-		fmt.Println("Bus read not implemented")
+		fmt.Printf("Bus write not implemented %x\n", a)
+		//panic(0)
 		return //TODO
 	}
 	// High RAM
@@ -104,8 +110,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
-		fmt.Println("Bus read not implemented")
-		return	//TODO
+		b.cpu.SetIeRegister(v)
+		return
 	}
 
 	fmt.Println("Bus write not implemented")

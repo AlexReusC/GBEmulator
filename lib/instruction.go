@@ -14,6 +14,7 @@ const (
 	in_Di inType		= "Di"
 	in_Ld8 inType		= "Ld8"
 	in_Ld16 inType		= "Ld16"
+	in_Ldh inType 		= "Ldh"
 )
 
 const (
@@ -31,11 +32,13 @@ const (
 	target_SP targetType		= "SP"
 	target_n targetType			= "n"
 	target_nn targetType		= "nn"
+	target_C_M targetType		= "C-M"
 	target_BC_M targetType		= "BC-M"
 	target_DE_M targetType		= "DE-M"
 	target_HL_M targetType		= "HL-M"
 	target_HLP_M targetType		= "HLP-M"
 	target_HLM_M targetType		= "HLM-M"
+	target_n_M 	targetType		= "n-M"
 	target_nn_M targetType		= "nn-M;"
 	target_None targetType		= "none"
 )
@@ -175,8 +178,12 @@ var instructions = map[uint8]Instruction{
 
 	0xC3: {in_Jp, target_None, target_nn, cond_None},
 	//0xEX
+	0xE0: {in_Ldh, target_n_M, target_A, cond_None},
+	0xE2: {in_Ldh, target_C_M, target_A, cond_None},
 	0xEA: {in_Ld8, target_nn_M, target_A, cond_None},
 	//0xFX
+	0xF0: {in_Ldh, target_A, target_n_M, cond_None},
+	0xF2: {in_Ldh, target_A, target_C_M, cond_None},
 	0xF3: {in_Di, target_None, target_None, cond_None},
 	0xFA: {in_Ld8, target_A, target_nn_M, cond_None},
 	//TODO: More instructions

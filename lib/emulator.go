@@ -13,12 +13,13 @@ func Run() {
 		return
 	}
 
-	bus, err := LoadBus(cart, ram)
+	cpu, err := LoadCpu()
 	if err != nil {
 		return
 	}
 
-	cpu, err := LoadCpu()
+	//Probably should make that the cpu creates the bus
+	bus, err := LoadBus(cart, ram, cpu)
 	if err != nil {
 		return
 	}

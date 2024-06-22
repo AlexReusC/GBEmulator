@@ -47,15 +47,24 @@ type CPU struct {
 	Source Data
 	Destination Data
 	DestinationTarget targetType
-
 	CurrentConditionResult bool
+
 	InterruptorMasterEnabled bool
+	IeRegister uint8
 }
 
 func LoadCpu() (*CPU, error) {
 	c := &CPU{Register: registers{pc: 0x0100, a: 0x01}}
 
 	return c, nil
+}
+
+func (c *CPU) GetIeRegister() uint8 {
+	return c.IeRegister
+}
+
+func (c *CPU) SetIeRegister(n uint8) {
+	c.IeRegister = n
 }
 
 func (c *CPU) GetFlag(flag flagRegister) bool {
@@ -92,11 +101,19 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 			return Data{uint16(c.Register.a), false, u8}, nil
 		case target_SP:
 			return Data{c.Register.sp, false, u16}, nil
+		case target_n:
+			n := uint16(b.BusRead(c.Register.pc))
+			c.Register.pc += 1
+			return Data{n, false, u8}, nil
 		case target_nn:
 			lo := uint16(b.BusRead(c.Register.pc))
 			hi := uint16(b.BusRead(c.Register.pc+1))
 			c.Register.pc += 2
 			return Data{(hi << 8 | lo), false, u16}, nil
+		case target_n_M:
+			n := uint16(b.BusRead(c.Register.pc))
+			c.Register.pc += 1
+			return Data{n, true, u8}, nil
 		case target_nn_M:
 			nn := b.BusRead16(c.Register.pc)
 			c.Register.pc += 2
@@ -111,6 +128,8 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 
 func (c *CPU) SetRegister(t targetType, v uint16)  {
 	switch t {
+		case target_A:
+			c.Register.a = uint8(v)
 		case target_SP:
 			c.Register.sp = v
 
@@ -144,18 +163,18 @@ func (c *CPU) Di() {
 }
 
 func (c *CPU) Ld8(b *Bus) {
-	var sourceVal uint8
+	var input uint8
 
 	if c.Source.IsAddr{
-		sourceVal = b.BusRead(c.Source.Value)
+		input = b.BusRead(c.Source.Value)
 	}else{
-		sourceVal = uint8(c.Source.Value)
+		input = uint8(c.Source.Value)
 	}
 
 	if c.Destination.IsAddr{
-		b.BusWrite(c.Destination.Value, sourceVal)
+		b.BusWrite(c.Destination.Value, input)
 	} else{
-		c.SetRegister(c.DestinationTarget, uint16(sourceVal))
+		c.SetRegister(c.DestinationTarget, uint16(input))
 	}
 
 	//TODO: (HL) SP+e instruction
@@ -170,6 +189,23 @@ func (c *CPU) Ld16(b *Bus){
 	}
 }
 
+func (c *CPU) Ldh(b *Bus){
+	var input uint8
+
+	if c.Source.IsAddr{
+		input = b.BusRead( 0xFF00 | uint16(b.BusRead(c.Source.Value)) )
+	} else {
+		input = uint8(c.Source.Value)
+	}
+
+	if c.Destination.IsAddr{
+		b.BusWrite( 0xFF00 | c.Destination.Value,  input)
+	} else {
+		c.SetRegister(target_A, uint16(input)) //If destination is not address is always register A
+	}
+
+}
+
 func (cpu *CPU) Step(b *Bus) error {
 	opcode := b.BusRead(cpu.Register.pc)
 	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, opcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
@@ -177,18 +213,11 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
-	fmt.Printf("Instruction: %s, Destination: %s, Source: %s\n", instruction.InstructionType, instruction.Destination, instruction.Source)
+	fmt.Printf("Instruction: %-6s Destination: %-6s Source: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.l, cpu.Register.h)
 	cpu.Register.pc += 1
 
-	//Get source
-	data, err := cpu.GetTarget(instruction.Source, b)
-	if err != nil{
-		return err
-	}
-	cpu.Source = data
-
-	//Get destination
-	data, err = cpu.GetTarget(instruction.Destination, b)
+	//Get destination, including inmediate
+	data, err := cpu.GetTarget(instruction.Destination, b)
 	if err != nil{
 		return err
 	}
@@ -196,6 +225,15 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !cpu.Destination.IsAddr {
 		cpu.DestinationTarget = instruction.Destination
 	}
+
+	//Get source, including inmediate
+	data, err = cpu.GetTarget(instruction.Source, b)
+	if err != nil{
+		return err
+	}
+	cpu.Source = data
+
+
 
 	//Conditional mode
 	currentCondition := instruction.ConditionType
@@ -219,6 +257,8 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Ld8(b)
 		case in_Ld16:
 			cpu.Ld16(b)
+		case in_Ldh:
+			cpu.Ldh(b)
 		default:
 			return errors.New("invalid instruction")
 	}
