@@ -10,11 +10,18 @@ const (
 	in_Nop inType	 	= "Nop"
 	in_Xor inType		= "Xor"
 	in_Jp inType		= "Jp"
+	in_Jr inType 		= "Jr"
 	in_Add inType		= "Add"
 	in_Di inType		= "Di"
 	in_Ld8 inType		= "Ld8"
 	in_Ld16 inType		= "Ld16"
 	in_Ldh inType 		= "Ldh"
+	in_Push inType 		= "Push"
+	in_Pop inType		= "Pop"
+	in_Call inType 		= "Call"
+	in_Ret inType		= "Ret"
+	in_Reti inType		= "Reti"
+	in_Rst inType		= "Rst"
 )
 
 const (
@@ -26,6 +33,7 @@ const (
 	target_F targetType			= "F"
 	target_H targetType			= "H"
 	target_L targetType			= "L"
+	target_AF targetType		= "AF"
 	target_BC targetType		= "BC"
 	target_DE targetType		= "DE"
 	target_HL targetType		= "HL"
@@ -91,18 +99,23 @@ var instructions = map[uint8]Instruction{
 	0x11: {in_Ld16, target_DE, target_nn, cond_None},
 	0x12: {in_Ld8, target_DE_M, target_A, cond_None},
 	0x16: {in_Ld8, target_D, target_n, cond_None},
+	0x18: {in_Jr, target_None, target_n, cond_None},
 	0x1A: {in_Ld8, target_A, target_DE_M, cond_None},
 	0x1E: {in_Ld8, target_E, target_n, cond_None},
 	// 0x2X
+	0x20: {in_Jr, target_None, target_n, cond_NZ},
 	0x21: {in_Ld16, target_HL, target_nn, cond_None},
 	0x22: {in_Ld8, target_HLP_M, target_A, cond_None},
 	0x26: {in_Ld8, target_H, target_n, cond_None},
+	0x28: {in_Jr, target_None, target_n, cond_Z},
 	0x2A: {in_Ld8, target_A, target_HLP_M, cond_None},
 	0x2E: {in_Ld8, target_L, target_n, cond_None},
 	// 0x3X
+	0x30: {in_Jr, target_None, target_n, cond_NC},
 	0x31: {in_Ld16, target_SP, target_nn, cond_None},
 	0x32: {in_Ld8, target_HLM_M, target_A, cond_None},
 	0x36: {in_Ld8, target_HL_M, target_n, cond_None},
+	0x38: {in_Jr, target_None, target_n, cond_C},
 	0x3A: {in_Ld8, target_A, target_HLM_M, cond_None},
 	0x3E: {in_Ld8, target_A, target_n, cond_None},
 	//0x4X
@@ -176,15 +189,49 @@ var instructions = map[uint8]Instruction{
 	//0x8X
 	0x80: {in_Add, target_B, target_A, cond_None},
 
+	//0xCX
+	0xC0: {in_Ret, target_None, target_None, cond_NZ},
+	0xC1: {in_Pop, target_None, target_BC, cond_None},
+	0xC2: {in_Jp, target_None, target_nn, cond_NZ},
 	0xC3: {in_Jp, target_None, target_nn, cond_None},
+	0xC4: {in_Call, target_None, target_nn, cond_NZ},
+	0xC5: {in_Push, target_None, target_BC, cond_None},
+	0xC7: {in_Rst, target_None, target_None, cond_None},
+	0xC8: {in_Ret, target_None, target_None, cond_Z},
+	0xC9: {in_Ret, target_None, target_None, cond_None},
+	0xCA: {in_Jp, target_None, target_nn, cond_Z},
+	0xCC: {in_Call, target_None, target_nn, cond_Z},
+	0xCD: {in_Call, target_None, target_nn, cond_None},
+	0xCF: {in_Rst, target_None, target_None, cond_None},
+	//0xDX
+	0xD0: {in_Ret, target_None, target_None, cond_NC},
+	0xD1: {in_Pop, target_None, target_DE, cond_None},
+	0xD2: {in_Jp, target_None, target_nn, cond_NC},
+	0xD4: {in_Call, target_None, target_nn, cond_NC},
+	0xD5: {in_Push, target_None, target_DE, cond_None},
+	0xD7: {in_Rst, target_None, target_None, cond_None},
+	0xD8: {in_Ret, target_None, target_None, cond_C},
+	0xD9: {in_Reti, target_None, target_None, cond_None},
+	0xDA: {in_Jp, target_None, target_nn, cond_C},
+	0xDC: {in_Jp, target_None, target_nn, cond_C},
+	0xDF: {in_Rst, target_None, target_None, cond_None},
 	//0xEX
 	0xE0: {in_Ldh, target_n_M, target_A, cond_None},
+	0xE1: {in_Pop, target_None, target_HL, cond_None},
 	0xE2: {in_Ldh, target_C_M, target_A, cond_None},
+	0xE5: {in_Push, target_None, target_HL, cond_None},
+	0xE7: {in_Push, target_None, target_None, cond_None},
+	0xE9: {in_Jp, target_None, target_HL, cond_None},
 	0xEA: {in_Ld8, target_nn_M, target_A, cond_None},
+	0xEF: {in_Rst, target_None, target_None, cond_None},
 	//0xFX
 	0xF0: {in_Ldh, target_A, target_n_M, cond_None},
+	0xF1: {in_Pop, target_None, target_AF, cond_None},
 	0xF2: {in_Ldh, target_A, target_C_M, cond_None},
 	0xF3: {in_Di, target_None, target_None, cond_None},
+	0xF5: {in_Push, target_None, target_AF, cond_None},
+	0xF7: {in_Rst, target_None, target_None, cond_None},
 	0xFA: {in_Ld8, target_A, target_nn_M, cond_None},
+	0xFF: {in_Rst, target_None, target_None, cond_None},
 	//TODO: More instructions
 }

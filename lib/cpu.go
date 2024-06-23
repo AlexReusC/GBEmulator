@@ -203,8 +203,16 @@ func (c *CPU) Ldh(b *Bus){
 	} else {
 		c.SetRegister(target_A, uint16(input)) //If destination is not address is always register A
 	}
+}
+
+func (c *CPU) Push(b *Bus){
 
 }
+
+func (c *CPU) Pop(b *Bus){
+
+}
+
 
 func (cpu *CPU) Step(b *Bus) error {
 	opcode := b.BusRead(cpu.Register.pc)
@@ -259,6 +267,10 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Ld16(b)
 		case in_Ldh:
 			cpu.Ldh(b)
+		case in_Push:
+			cpu.Push(b)
+		case in_Pop:
+			cpu.Pop(b)
 		default:
 			return errors.New("invalid instruction")
 	}
