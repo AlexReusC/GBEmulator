@@ -48,6 +48,7 @@ type CPU struct {
 	Destination Data
 	DestinationTarget targetType
 	CurrentConditionResult bool
+	currentOpcode uint8
 
 	InterruptorMasterEnabled bool
 	IeRegister uint8
@@ -206,18 +207,87 @@ func (c *CPU) Ldh(b *Bus){
 }
 
 func (c *CPU) Push(b *Bus){
+	c.Register.sp -= 1
+	b.BusWrite(c.Register.sp, uint8((c.Source.Value & 0xFF00) >> 8))
 
+	c.Register.sp -= 1
+	b.BusWrite(c.Register.sp, uint8(c.Source.Value & 0xFF))
 }
 
 func (c *CPU) Pop(b *Bus){
+	lo := uint16(b.BusRead(c.Register.sp))
+	c.Register.sp += 1
 
+	hi := uint16(b.BusRead(c.Register.sp))
+	c.Register.sp += 1
+
+	c.SetRegister(c.DestinationTarget, (hi << 8) | lo )
+}
+
+func (c *CPU) Call(b *Bus){
+	if c.CurrentConditionResult {
+		//Push pc
+		c.Register.sp -= 1
+		b.BusWrite(c.Register.sp, uint8((c.Register.pc & 0xFF00) >> 8))
+		c.Register.sp -= 1
+		b.BusWrite(c.Register.sp, uint8(c.Register.pc & 0xFF))
+
+		//Jp nn
+		c.Register.pc = c.Source.Value
+	}
+}
+
+func (c *CPU) Ret(b *Bus){
+	if c.CurrentConditionResult {
+		//Pop
+		lo := uint16(b.BusRead(c.Register.sp))
+		c.Register.sp += 1
+
+		hi := uint16(b.BusRead(c.Register.sp))
+		c.Register.sp += 1 
+		//Jp
+		c.Register.pc = (hi << 8) | lo
+	}
+}
+
+func (c *CPU) Reti(b *Bus){
+	//Pop
+	lo := uint16(b.BusRead(c.Register.sp))
+	c.Register.sp += 1
+
+	hi := uint16(b.BusRead(c.Register.sp))
+	c.Register.sp += 1 
+	//Jp
+	c.Register.pc = (hi << 8) | lo
+
+	c.InterruptorMasterEnabled = true
+}
+
+func (c *CPU) Rst(b *Bus){
+	var rstAddress = map[uint8]uint16{
+		0xC7: 0x00, 
+		0xD7: 0x10,
+		0xE7: 0x20,
+		0xF7: 0x30,
+		0xCF: 0x08,
+		0xDF: 0x18,
+		0xEF: 0x28,
+		0xFF: 0x38,
+	}
+
+	c.Register.sp -= 1
+	b.BusWrite(c.Register.sp, uint8((c.Register.pc & 0xFF00) >> 8))
+	c.Register.sp -= 1
+	b.BusWrite(c.Register.sp, uint8(c.Register.pc & 0xFF))
+
+	c.Register.pc = (0x00 << 8) | rstAddress[c.currentOpcode]
 }
 
 
 func (cpu *CPU) Step(b *Bus) error {
-	opcode := b.BusRead(cpu.Register.pc)
-	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, opcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
-	instruction, ok := instructions[opcode]
+	cpu.currentOpcode = b.BusRead(cpu.Register.pc)
+	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
+	instruction, ok := instructions[cpu.currentOpcode]
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
@@ -240,8 +310,6 @@ func (cpu *CPU) Step(b *Bus) error {
 		return err
 	}
 	cpu.Source = data
-
-
 
 	//Conditional mode
 	currentCondition := instruction.ConditionType
@@ -271,6 +339,14 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Push(b)
 		case in_Pop:
 			cpu.Pop(b)
+		case in_Call:
+			cpu.Call(b)
+		case in_Ret:
+			cpu.Ret(b)
+		case in_Reti:
+			cpu.Reti(b)
+		case in_Rst:
+			cpu.Rst(b)
 		default:
 			return errors.New("invalid instruction")
 	}
