@@ -115,61 +115,61 @@ func (c *CPU) GetTargetHL() uint16{
 
 func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 	switch t {
-		case  target_A:
+		case  A:
 			return Data{uint16(c.Register.a), false}, nil
-		case target_B:
+		case B:
 			return Data{uint16(c.Register.b), false}, nil
-		case target_C:
+		case C:
 			return Data{uint16(c.Register.c), false}, nil
-		case target_D:
+		case D:
 			return Data{uint16(c.Register.d), false}, nil
-		case target_E:
+		case E:
 			return Data{uint16(c.Register.e), false}, nil
-		case target_F:
+		case F:
 			return Data{uint16(c.Register.f), false}, nil
-		case target_H:
+		case H:
 			return Data{uint16(c.Register.h), false}, nil
-		case target_L:
+		case L:
 			return Data{uint16(c.Register.l), false}, nil
-		case target_AF:
+		case AF:
 			return Data{c.GetTargetAF(), false}, nil
-		case target_BC:
+		case BC:
 			return Data{c.GetTargetBC(), false}, nil
-		case target_DE:
+		case DE:
 			return Data{c.GetTargetDE(), false}, nil
-		case target_HL:
+		case HL:
 			return Data{c.GetTargetHL(), false}, nil
-		case target_SP:
+		case SP:
 			return Data{c.Register.sp, false}, nil
-		case target_n:
+		case n:
 			n := uint16(b.BusRead(c.Register.pc))
 			c.Register.pc += 1
 			return Data{n, false}, nil
-		case target_nn:		
+		case nn:		
 			nn := b.BusRead16(c.Register.pc)
 			c.Register.pc += 2
 			return Data{nn, false}, nil
-		case target_C_M:
+		case C_M:
 			return Data{uint16(c.Register.c), true}, nil
-		case target_BC_M:
+		case BC_M:
 			return Data{c.GetTargetBC(), true}, nil
-		case target_DE_M:
+		case DE_M:
 			return Data{c.GetTargetDE(), true}, nil
-		case target_HL_M:
+		case HL_M:
 			return Data{c.GetTargetHL(), true}, nil
-		case target_HLP_M:
+		case HLP_M:
 			return Data{0, false}, errors.New("target not implemented: (HL+)")
-		case target_HLM_M:
+		case HLM_M:
 			return Data{0, false}, errors.New("target not implemented: (HL-)")
-		case target_n_M:
+		case n_M:
 			n := uint16(b.BusRead(c.Register.pc))
 			c.Register.pc += 1
 			return Data{n, true}, nil
-		case target_nn_M:
+		case nn_M:
 			nn := b.BusRead16(c.Register.pc)
 			c.Register.pc += 2
 			return Data{nn, true}, nil
-		case target_None:
+		case None:
 			return Data{0, false}, nil
 		// TODO: Other targets
 		default:
@@ -179,38 +179,38 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 
 func (c *CPU) SetRegister(t targetType, v uint16)  {
 	switch t {
-		case target_A:
+		case A:
 			c.Register.a = uint8(v)
-		case target_B:
+		case B:
 			c.Register.b = uint8(v)
-		case target_C:
+		case C:
 			c.Register.c = uint8(v)
-		case target_D:
+		case D:
 			c.Register.d = uint8(v)
-		case target_E:
+		case E:
 			c.Register.e = uint8(v)
-		case target_F:
+		case F:
 			c.Register.f = uint8(v)	
-		case target_H:
+		case H:
 			c.Register.h = uint8(v)	
-		case target_L:
+		case L:
 			c.Register.l = uint8(v)	
-		case target_AF:
+		case AF:
 			c.Register.a = uint8((v & 0xFF00) >> 8)
 			c.Register.f = uint8(v & 0xFF)
-		case target_BC:
+		case BC:
 			c.Register.b = uint8((v & 0xFF00) >> 8)
 			c.Register.c = uint8(v & 0xFF)
-		case target_DE:
+		case DE:
 			c.Register.d = uint8((v & 0xFF00) >> 8)
 			c.Register.e = uint8(v & 0xFF)
-		case target_HL:
+		case HL:
 			c.Register.h = uint8((v & 0xFF00) >> 8)
 			c.Register.l = uint8(v & 0xFF)
-		case target_SP:
+		case SP:
 			c.Register.sp = v
 		default:
-			fmt.Println("Unknown register for setting")
+			fmt.Printf("Unknown register %x for setting\n", t)
 			panic(0)
 	}
 }
@@ -230,7 +230,14 @@ func (c *CPU) Jp(){
 	}
 }
 
-func (c *CPU) Add() {
+func (c *CPU) Jr(){
+	if c.CurrentConditionResult{
+		c.Register.pc = c.Register.pc + c.Source.Value
+		//cycles(1)
+	}
+}
+
+func (c *CPU) Add(){
 
 }
 
@@ -277,7 +284,7 @@ func (c *CPU) Ldh(b *Bus){
 	if c.Destination.IsAddr{
 		b.BusWrite( 0xFF00 | c.Destination.Value,  input)
 	} else {
-		c.SetRegister(target_A, uint16(input)) //If destination is not address is always register A
+		c.SetRegister(A, uint16(input)) //If destination is not address is always register A
 	}
 }
 
@@ -295,6 +302,7 @@ func (c *CPU) Pop(b *Bus){
 
 	hi := uint16(b.BusRead(c.Register.sp))
 	c.Register.sp += 1
+	
 
 	c.SetRegister(c.DestinationTarget, (hi << 8) | lo )
 }
@@ -305,7 +313,7 @@ func (c *CPU) Call(b *Bus){
 		c.Register.sp -= 1
 		b.BusWrite(c.Register.sp, uint8((c.Register.pc & 0xFF00) >> 8))
 		c.Register.sp -= 1
-		b.BusWrite(c.Register.sp, uint8(c.Register.pc & 0xFF))
+		b.BusWrite(c.Register.sp, uint8(c.Register.pc & 0x00FF))
 
 		//Jp nn
 		c.Register.pc = c.Source.Value
@@ -366,7 +374,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
-	fmt.Printf("Instruction: %-6s Destination: %-6s Source: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.l, cpu.Register.h)
+	fmt.Printf("Instruction: %-6s Destination: %-6s Source: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
 	cpu.Register.pc += 1
 
 	//Get destination, including inmediate
@@ -402,6 +410,8 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Xor()
 		case in_Jp:
 			cpu.Jp()
+		case in_Jr:
+			cpu.Jr()
 		case in_Di:
 			cpu.Di()
 		case in_Ld8:
