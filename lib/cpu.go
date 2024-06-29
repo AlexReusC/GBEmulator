@@ -29,16 +29,9 @@ type registers struct {
 
 type size = int
 
-const (
-	u16 size = iota
-	u8
-	undefined
-)
-
 type Data struct {
 	Value uint16
 	IsAddr bool
-	Length size
 }
 
 type CPU struct {
@@ -96,34 +89,91 @@ func (c *CPU) SetFlags(flagZ int, flagN int, flagH int, flagC int) {
 	}
 } 
 
+func (c *CPU) GetTargetAF() uint16{
+	hi := uint16(c.Register.a)
+	lo := uint16(c.Register.f)
+	return (hi << 8 | lo)
+}
+
+func (c *CPU) GetTargetBC() uint16{
+	hi := uint16(c.Register.b)
+	lo := uint16(c.Register.c)
+	return (hi << 8 | lo)
+}
+
+func (c *CPU) GetTargetDE() uint16{
+	hi := uint16(c.Register.d)
+	lo := uint16(c.Register.e)
+	return (hi << 8 | lo)
+}
+
+func (c *CPU) GetTargetHL() uint16{
+	hi := uint16(c.Register.h)
+	lo := uint16(c.Register.l)
+	return (hi << 8 | lo)
+}
+
 func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 	switch t {
 		case  target_A:
-			return Data{uint16(c.Register.a), false, u8}, nil
+			return Data{uint16(c.Register.a), false}, nil
+		case target_B:
+			return Data{uint16(c.Register.b), false}, nil
+		case target_C:
+			return Data{uint16(c.Register.c), false}, nil
+		case target_D:
+			return Data{uint16(c.Register.d), false}, nil
+		case target_E:
+			return Data{uint16(c.Register.e), false}, nil
+		case target_F:
+			return Data{uint16(c.Register.f), false}, nil
+		case target_H:
+			return Data{uint16(c.Register.h), false}, nil
+		case target_L:
+			return Data{uint16(c.Register.l), false}, nil
+		case target_AF:
+			return Data{c.GetTargetAF(), false}, nil
+		case target_BC:
+			return Data{c.GetTargetBC(), false}, nil
+		case target_DE:
+			return Data{c.GetTargetDE(), false}, nil
+		case target_HL:
+			return Data{c.GetTargetHL(), false}, nil
 		case target_SP:
-			return Data{c.Register.sp, false, u16}, nil
+			return Data{c.Register.sp, false}, nil
 		case target_n:
 			n := uint16(b.BusRead(c.Register.pc))
 			c.Register.pc += 1
-			return Data{n, false, u8}, nil
-		case target_nn:
-			lo := uint16(b.BusRead(c.Register.pc))
-			hi := uint16(b.BusRead(c.Register.pc+1))
+			return Data{n, false}, nil
+		case target_nn:		
+			nn := b.BusRead16(c.Register.pc)
 			c.Register.pc += 2
-			return Data{(hi << 8 | lo), false, u16}, nil
+			return Data{nn, false}, nil
+		case target_C_M:
+			return Data{uint16(c.Register.c), true}, nil
+		case target_BC_M:
+			return Data{c.GetTargetBC(), true}, nil
+		case target_DE_M:
+			return Data{c.GetTargetDE(), true}, nil
+		case target_HL_M:
+			return Data{c.GetTargetHL(), true}, nil
+		case target_HLP_M:
+			return Data{0, false}, errors.New("target not implemented: (HL+)")
+		case target_HLM_M:
+			return Data{0, false}, errors.New("target not implemented: (HL-)")
 		case target_n_M:
 			n := uint16(b.BusRead(c.Register.pc))
 			c.Register.pc += 1
-			return Data{n, true, u8}, nil
+			return Data{n, true}, nil
 		case target_nn_M:
 			nn := b.BusRead16(c.Register.pc)
 			c.Register.pc += 2
-			return Data{nn, true, u16}, nil
+			return Data{nn, true}, nil
 		case target_None:
-			return Data{0, false, undefined}, nil
+			return Data{0, false}, nil
 		// TODO: Other targets
 		default:
-			return Data{0, false, undefined}, errors.New("unknown target type")
+			return Data{0, false}, errors.New("unknown target type")
 	}
 } 
 
@@ -131,9 +181,34 @@ func (c *CPU) SetRegister(t targetType, v uint16)  {
 	switch t {
 		case target_A:
 			c.Register.a = uint8(v)
+		case target_B:
+			c.Register.b = uint8(v)
+		case target_C:
+			c.Register.c = uint8(v)
+		case target_D:
+			c.Register.d = uint8(v)
+		case target_E:
+			c.Register.e = uint8(v)
+		case target_F:
+			c.Register.f = uint8(v)	
+		case target_H:
+			c.Register.h = uint8(v)	
+		case target_L:
+			c.Register.l = uint8(v)	
+		case target_AF:
+			c.Register.a = uint8((v & 0xFF00) >> 8)
+			c.Register.f = uint8(v & 0xFF)
+		case target_BC:
+			c.Register.b = uint8((v & 0xFF00) >> 8)
+			c.Register.c = uint8(v & 0xFF)
+		case target_DE:
+			c.Register.d = uint8((v & 0xFF00) >> 8)
+			c.Register.e = uint8(v & 0xFF)
+		case target_HL:
+			c.Register.h = uint8((v & 0xFF00) >> 8)
+			c.Register.l = uint8(v & 0xFF)
 		case target_SP:
 			c.Register.sp = v
-
 		default:
 			fmt.Println("Unknown register for setting")
 			panic(0)
