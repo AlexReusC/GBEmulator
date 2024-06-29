@@ -4,14 +4,31 @@ import "fmt"
 
 type Bus struct {
 	cart *Cart
-	ram *Ram
 	cpu *CPU
+	wram [0x2000]uint8
+	hram [0x80]uint8
 }
 
-func LoadBus(rb *Cart, rm *Ram, c *CPU) (*Bus, error) {
-	b := &Bus{cart: rb, ram: rm, cpu: c}
+func LoadBus(rb *Cart,  c *CPU) (*Bus, error) {
+	b := &Bus{cart: rb, cpu: c}
 
 	return b, nil
+}
+
+func (b *Bus) WramRead(a uint16) uint8 {
+	return b.wram[a-0xC000]
+}
+
+func (b *Bus) WramWrite(a uint16, v uint8) {
+	b.wram[a-0xC000] = v
+}
+
+func (b *Bus) HramRead(a uint16) uint8 {
+	return b.hram[a-0xFF80]
+}
+
+func (b *Bus) HramWrite(a uint16, v uint8) {
+	b.hram[a-0xFF80] = v
 }
 
 func (b *Bus) BusRead(a uint16) uint8 {
@@ -31,7 +48,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// Working RAM
 	if a < 0xE000 {
-		return b.ram.WramRead(a)
+		return b.WramRead(a)
 	}
 	// Echo RAM (prohibited)
 	if a < 0xFE00 {
@@ -55,7 +72,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// High RAM
 	if a < 0xFFFF {
-		return b.ram.HramRead(a)
+		return b.HramRead(a)
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
@@ -80,7 +97,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// Working RAM
 	if a < 0xE000 {
-		b.ram.WramWrite(a, v)
+		b.WramWrite(a, v)
 		return
 	}
 	// Echo RAM (prohibited)
@@ -105,7 +122,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// High RAM
 	if a < 0xFFFF {
-		b.ram.HramWrite(a, v)
+		b.HramWrite(a, v)
 		return
 	}
 	// CPU enable registerr

@@ -8,7 +8,6 @@ func Run() {
 		return
 	}
 
-	ram, err := LoadRam()
 	if err != nil {
 		return
 	}
@@ -19,7 +18,7 @@ func Run() {
 	}
 
 	//Probably should make that the cpu creates the bus
-	bus, err := LoadBus(cart, ram, cpu)
+	bus, err := LoadBus(cart,cpu)
 	if err != nil {
 		return
 	}
