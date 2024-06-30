@@ -22,6 +22,8 @@ const (
 	in_Ret inType		= "Ret"
 	in_Reti inType		= "Reti"
 	in_Rst inType		= "Rst"
+	in_Inc inType		= "Inc"
+	in_Dec inType 		= "Dec"
 )
 
 const (
@@ -91,32 +93,56 @@ var instructions = map[uint8]Instruction{
 	0x00: {in_Nop,  None, 	None, 	cond_None},
 	0x01: {in_Ld16, BC, 	nn, 	cond_None},
 	0x02: {in_Ld8, 	BC_M, 	A, 		cond_None},
-	0x03: {in_Ld8, 	B, 		n, 		cond_None},
+	0x03: {in_Inc, 	None, 	BC, 	cond_None},
+	0x04: {in_Inc, 	None, 	B, 		cond_None},
+	0x05: {in_Dec, 	None, 	B, 		cond_None},
+	0x06: {in_Ld8, 	B, 		n, 		cond_None},
 	0x08: {in_Ld16, nn_M,	SP, 	cond_None},
 	0x0A: {in_Ld8, 	A,		BC_M, 	cond_None},
+	0x0B: {in_Dec, 	None, 	BC, 	cond_None},
+	0x0C: {in_Inc, 	None, 	C, 		cond_None},
+	0x0D: {in_Dec, 	None, 	C, 		cond_None},
 	0x0E: {in_Ld8, 	C, 		n, 		cond_None},
 	// 0x1X
 	0x11: {in_Ld16, DE,		nn, 	cond_None},
 	0x12: {in_Ld8, 	DE_M, 	A, 		cond_None},
+	0x13: {in_Inc, 	None, 	DE, 	cond_None},
+	0x14: {in_Inc, 	None, 	D, 		cond_None},
+	0x15: {in_Dec, 	None, 	D, 		cond_None},
 	0x16: {in_Ld8, 	D, 		n, 		cond_None},
 	0x18: {in_Jr, 	None, 	n, 		cond_None},
 	0x1A: {in_Ld8,	A, 		DE_M, 	cond_None},
+	0x1B: {in_Dec, 	None, 	DE, 	cond_None},
+	0x1C: {in_Inc, 	None, 	E, 		cond_None},
+	0x1D: {in_Dec, 	None, 	E, 		cond_None},
 	0x1E: {in_Ld8,	E, 		n, 		cond_None},
 	// 0x2X
 	0x20: {in_Jr, 	None, 	n,		cond_NZ},
 	0x21: {in_Ld16, HL, 	nn, 	cond_None},
 	0x22: {in_Ld8, 	HLP_M, 	A, 		cond_None},
+	0x23: {in_Inc, 	None, 	HL, 	cond_None},
+	0x24: {in_Inc, 	None, 	H, 		cond_None},
+	0x25: {in_Dec, 	None, 	H, 		cond_None},
 	0x26: {in_Ld8, 	H, 		n, 		cond_None},
 	0x28: {in_Jr, 	None, 	n, 		cond_Z},
 	0x2A: {in_Ld8, 	A, 		HLP_M,	cond_None},
+	0x2B: {in_Dec, 	None, 	HL, 	cond_None},
+	0x2C: {in_Inc, 	None, 	L, 		cond_None},
+	0x2D: {in_Dec, 	None, 	L, 		cond_None},
 	0x2E: {in_Ld8, 	L, 		n, 		cond_None},
 	// 0x3X
 	0x30: {in_Jr, 	None, 	n,		cond_NC},
 	0x31: {in_Ld16, SP, 	nn, 	cond_None},
 	0x32: {in_Ld8, 	HLM_M, 	A, 		cond_None},
+	0x33: {in_Inc, 	None, 	SP, 	cond_None},
+	0x34: {in_Inc, 	None, 	HL_M, 	cond_None},
+	0x35: {in_Dec, 	None, 	HL_M, 		cond_None},
 	0x36: {in_Ld8, 	HL_M, 	n, 		cond_None},
 	0x38: {in_Jr, 	None, 	n, 		cond_C},
 	0x3A: {in_Ld8, 	A, 		HLM_M, 	cond_None},
+	0x3B: {in_Dec, 	None, 	SP, 		cond_None},
+	0x3C: {in_Inc, 	None, 	A, 		cond_None},
+	0x3D: {in_Dec, 	None, 	A, 		cond_None},
 	0x3E: {in_Ld8, 	A, 		n, 		cond_None},
 	//0x4X
 	0x41: {in_Ld8, 	B, 		B, 		cond_None},
