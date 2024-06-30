@@ -1,5 +1,19 @@
 package lib
 
+//TODO: flags behavior
+//TODO: clock behavior
+
+var rstAddress = map[uint8]uint16{
+		0xC7: 0x00,
+		0xD7: 0x10,
+		0xE7: 0x20,
+		0xF7: 0x30,
+		0xCF: 0x08,
+		0xDF: 0x18,
+		0xEF: 0x28,
+		0xFF: 0x38,
+}
+
 func (c *CPU) Nop() {
 }
 
@@ -20,10 +34,6 @@ func (c *CPU) Jr() {
 		c.Register.pc = c.Register.pc + c.Source.Value
 		//cycles(1)
 	}
-}
-
-func (c *CPU) Add() {
-
 }
 
 func (c *CPU) Di() {
@@ -131,17 +141,6 @@ func (c *CPU) Reti(b *Bus) {
 }
 
 func (c *CPU) Rst(b *Bus) {
-	var rstAddress = map[uint8]uint16{
-		0xC7: 0x00,
-		0xD7: 0x10,
-		0xE7: 0x20,
-		0xF7: 0x30,
-		0xCF: 0x08,
-		0xDF: 0x18,
-		0xEF: 0x28,
-		0xFF: 0x38,
-	}
-
 	c.Register.sp -= 1
 	b.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 	c.Register.sp -= 1
@@ -159,3 +158,60 @@ func (c *CPU) Dec() {
 	newVal := c.Source.Value - 1
 	c.SetRegister(c.SourceTarget, newVal)
 }
+
+func (c *CPU) Add() {
+	input := c.Source.Value
+	result := c.Register.a + uint8(input)
+	c.SetRegister(A, uint16(result))
+}
+
+func (c *CPU) AddHl() {
+	input := c.Source.Value
+	result := c.GetTargetHL() + input
+	c.SetRegister(HL, result)
+}
+
+func (c *CPU) Add16_8() {
+	input16 := c.Destination.Value
+	input8 := c.Source.Value
+	result := input8 + input16
+
+	c.SetRegister(c.DestinationTarget, result)
+}
+
+
+func BoolToUint(b bool) uint8 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func (c *CPU) Adc() {
+	input := uint8(c.Source.Value)
+	carryBit := BoolToUint(c.GetFlag(cf))
+
+	result := uint16(c.Register.a + input + carryBit)
+	c.SetRegister(A, result)
+}
+
+func (c *CPU) Sub() {
+	input := c.Source.Value
+	result := uint16(c.Register.a - uint8(input))
+	c.SetRegister(A, result)
+}
+
+func (c *CPU) Sbc() {
+	input := uint8(c.Source.Value)
+	carryBit := BoolToUint(c.GetFlag(cf))
+
+	result := uint16(c.Register.a - input - carryBit)
+	c.SetRegister(A, result)
+}
+
+
+
+
+
+
+

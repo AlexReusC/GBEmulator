@@ -157,9 +157,13 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 		case HL_M:
 			return Data{c.GetTargetHL(), true}, nil
 		case HLP_M:
-			return Data{0, false}, errors.New("target not implemented: (HL+)")
+			val := c.GetTargetHL()
+			c.SetRegister(HL, val + 1)
+			return Data{val, true}, nil 
 		case HLM_M:
-			return Data{0, false}, errors.New("target not implemented: (HL-)")
+			val := c.GetTargetHL()
+			c.SetRegister(HL, val - 1)
+			return Data{val, true}, nil 
 		case n_M:
 			n := uint16(b.BusRead(c.Register.pc))
 			c.Register.pc += 1
@@ -221,7 +225,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
-	fmt.Printf("Instruction: %-6s Destination: %-6s Source: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
+	fmt.Printf("Inst: %-6s Dest: %-6s Src: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
 	cpu.Register.pc += 1
 
 	//Get destination, including inmediate
@@ -251,38 +255,50 @@ func (cpu *CPU) Step(b *Bus) error {
 
 	//Instruction type
 	switch instruction.InstructionType {
-		case in_Nop:
+		case Nop:
 			cpu.Nop()
-		case in_Xor:
+		case Xor:
 			cpu.Xor()
-		case in_Jp:
+		case Jp:
 			cpu.Jp()
-		case in_Jr:
+		case Jr:
 			cpu.Jr()
-		case in_Di:
+		case Di:
 			cpu.Di()
-		case in_Ld8:
+		case Ld8:
 			cpu.Ld8(b)
-		case in_Ld16:
+		case Ld16:
 			cpu.Ld16(b)
-		case in_Ldh:
+		case Ldh:
 			cpu.Ldh(b)
-		case in_Push:
+		case Push:
 			cpu.Push(b)
-		case in_Pop:
+		case Pop:
 			cpu.Pop(b)
-		case in_Call:
+		case Call:
 			cpu.Call(b)
-		case in_Ret:
+		case Ret:
 			cpu.Ret(b)
-		case in_Reti:
+		case Reti:
 			cpu.Reti(b)
-		case in_Rst:
+		case Rst:
 			cpu.Rst(b)
-		case in_Inc:
+		case Inc:
 			cpu.Inc()
-		case in_Dec:
+		case Dec:
 			cpu.Dec()
+		case Add:
+			cpu.Add()
+		case AddHl:
+			cpu.AddHl()
+		case Add16_8:
+			cpu.Add16_8()
+		case Adc:
+			cpu.Adc()
+		case Sub:
+			cpu.Sub()
+		case Sbc:
+			cpu.Sbc()
 		default:
 			return errors.New("invalid instruction")
 	}
