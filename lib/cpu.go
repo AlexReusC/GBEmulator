@@ -37,8 +37,8 @@ type CPU struct {
 
 	Source Data
 	Destination Data
-	SourceTarget targetType
-	DestinationTarget targetType
+	SourceTarget target
+	DestinationTarget target
 	CurrentConditionResult bool
 	currentOpcode uint8
 
@@ -112,7 +112,7 @@ func (c *CPU) GetTargetHL() uint16{
 	return (hi << 8 | lo)
 }
 
-func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
+func (c *CPU) GetTarget(t target, b *Bus) (Data, error) {
 	switch t {
 		case  A:
 			return Data{uint16(c.Register.a), false}, nil
@@ -180,7 +180,7 @@ func (c *CPU) GetTarget(t targetType, b *Bus) (Data, error) {
 	}
 } 
 
-func (c *CPU) SetRegister(t targetType, v uint16)  {
+func (c *CPU) SetRegister(t target, v uint16)  {
 	switch t {
 		case A:
 			c.Register.a = uint8(v)
@@ -225,6 +225,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	if !ok {
 		return errors.New("opcode not implemented")
 	}
+	//TODO: logging for flags
 	fmt.Printf("Inst: %-6s Dest: %-6s Src: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
 	cpu.Register.pc += 1
 
@@ -257,8 +258,6 @@ func (cpu *CPU) Step(b *Bus) error {
 	switch instruction.InstructionType {
 		case Nop:
 			cpu.Nop()
-		case Xor:
-			cpu.Xor()
 		case Jp:
 			cpu.Jp()
 		case Jr:
@@ -298,7 +297,9 @@ func (cpu *CPU) Step(b *Bus) error {
 		case Sub:
 			cpu.Sub()
 		case Sbc:
-			cpu.Sbc()
+			cpu.Sbc()	
+		case Xor:
+			cpu.Xor()
 		default:
 			return errors.New("invalid instruction")
 	}

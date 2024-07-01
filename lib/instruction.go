@@ -2,72 +2,76 @@ package lib
 
 import "errors"
 
-type inType string 
-type condType string
-type targetType string
+type procedure string 
+type conditional string
+type target string
 
 const (
-	Nop inType	 	= "Nop"
-	Xor inType		= "Xor"
-	Jp inType		= "Jp"
-	Jr inType 		= "Jr"
-	Di inType		= "Di"
-	Ld8 inType		= "Ld8"
-	Ld16 inType		= "Ld16"
-	Ldh inType 		= "Ldh"
-	Push inType 	= "Push"
-	Pop inType		= "Pop"
-	Call inType 	= "Call"
-	Ret inType		= "Ret"
-	Reti inType		= "Reti"
-	Rst inType		= "Rst"
-	Inc inType		= "Inc"
-	Dec inType 		= "Dec"
-	Add inType		= "Add"
-	AddHl inType	= "AddHl"
-	Add16_8 inType	= "Add16_8"
-	Adc inType		= "Adc"
-	Sub inType		= "Sub"
-	Sbc inType 		= "Sbc"
+	Nop 		procedure = "Nop"
+	Jp 			procedure = "Jp"
+	Jr 			procedure = "Jr"
+	Di 			procedure = "Di"
+	Ld8 		procedure = "Ld8"
+	Ld16 		procedure = "Ld16"
+	Ldh 		procedure = "Ldh"
+	Push 		procedure = "Push"
+	Pop 		procedure = "Pop"
+	Call 		procedure = "Call"
+	Ret 		procedure = "Ret"
+	Reti 		procedure = "Reti"
+	Rst 		procedure = "Rst"
+	Inc 		procedure = "Inc"
+	Dec 		procedure = "Dec"
+	Add 		procedure = "Add"
+	AddHl 		procedure = "AddHl"
+	Add16_8 	procedure = "Add16_8"
+	Adc 		procedure = "Adc"
+	Sub 		procedure = "Sub"
+	Sbc 		procedure = "Sbc"
+	And 		procedure = "And"
+	Xor 		procedure = "Xor"
+	Or 			procedure = "Or"
+	Cp 			procedure = "Cp"
+
 )
 
 const (
-	A targetType 		= "A"
-	B targetType		= "B"
-	C targetType		= "C"
-	D targetType		= "D"
-	E targetType		= "E"
-	F targetType		= "F"
-	H targetType		= "H"
-	L targetType		= "L"
-	AF targetType		= "AF"
-	BC targetType		= "BC"
-	DE targetType		= "DE"
-	HL targetType		= "HL"
-	SP targetType		= "SP"
-	e8 targetType		= "e8"
-	n targetType		= "n"
-	nn targetType		= "nn"
-	C_M targetType		= "(C)"
-	BC_M targetType		= "(BC)"
-	DE_M targetType		= "(DE)"
-	HL_M targetType		= "(HL)"
-	HLP_M targetType	= "(HL+)"
-	HLM_M targetType	= "(HL-)"
-	n_M targetType		= "(n)"
-	nn_M targetType		= "(nn)"
-	None targetType		= "none"
+	A 		target	= "A"
+	B 		target	= "B"
+	C 		target	= "C"
+	D 		target	= "D"
+	E 		target	= "E"
+	F 		target	= "F"
+	H 		target	= "H"
+	L 		target	= "L"
+	AF 		target	= "AF"
+	BC 		target	= "BC"
+	DE 		target	= "DE"
+	HL 		target	= "HL"
+	SP 		target	= "SP"
+	e8 		target	= "e8"
+	n 		target	= "n"
+	nn 		target	= "nn"
+	C_M		target	= "(C)"
+	BC_M	target	= "(BC)"
+	DE_M	target	= "(DE)"
+	HL_M	target	= "(HL)"
+	HLP_M	target	= "(HL+)"
+	HLM_M	target	= "(HL-)"
+	n_M		target	= "(n)"
+	nn_M	target	= "(nn)"
+	None	target	= "none"
 )
 
 const (
-	cond_None condType	= "None"
-	cond_C condType		= "C"
-	cond_NC condType	= "NC"
-	cond_Z condType		= "Z"
-	cond_NZ condType	= "NZ"
+	cond_None 	conditional	= "None"
+	cond_C 		conditional	= "C"
+	cond_NC 	conditional	= "NC"
+	cond_Z 		conditional	= "Z"
+	cond_NZ 	conditional	= "NZ"
 )
 
-func (cpu *CPU) checkCond( ct condType) (bool, error) {
+func (cpu *CPU) checkCond( ct conditional) (bool, error) {
 	c := cpu.GetFlag(cf)
 	z := cpu.GetFlag(zf)
 
@@ -88,10 +92,10 @@ func (cpu *CPU) checkCond( ct condType) (bool, error) {
 } 
 
 type Instruction struct {
-	InstructionType inType
-	Destination		targetType
-	Source			targetType
-	ConditionType   condType
+	InstructionType procedure
+	Destination		target
+	Source			target
+	ConditionType   conditional
 }
 
 var instructions = map[uint8]Instruction{
@@ -256,7 +260,41 @@ var instructions = map[uint8]Instruction{
 	0x9D: {Sbc, 	None, 	L, 		cond_None},
 	0x9E: {Sbc, 	None, 	HL_M, 	cond_None},
 	0x9F: {Sbc, 	None, 	A, 		cond_None},
-
+	//0xAX
+	0xA0: {And, 	None, 	B, 		cond_None},
+	0xA1: {And, 	None, 	C, 		cond_None},
+	0xA2: {And, 	None, 	D, 		cond_None},
+	0xA3: {And, 	None, 	E, 		cond_None},
+	0xA4: {And, 	None, 	H, 		cond_None},
+	0xA5: {And, 	None, 	L, 		cond_None},
+	0xA6: {And, 	None, 	HL_M, 	cond_None},
+	0xA7: {And, 	None, 	A, 		cond_None},
+	0xA8: {Xor, 	None, 	B, 		cond_None},
+	0xA9: {Xor, 	None, 	C, 		cond_None},
+	0xAA: {Xor, 	None, 	D, 		cond_None},
+	0xAB: {Xor, 	None, 	E, 		cond_None},
+	0xAC: {Xor, 	None, 	H, 		cond_None},
+	0xAD: {Xor, 	None, 	L, 		cond_None},
+	0xAE: {Xor, 	None, 	HL_M, 	cond_None},
+	0xAF: {Xor, 	None, 	A, 		cond_None},
+	//0xBX
+	0xB0: {Or, 		None, 	B, 		cond_None},
+	0xB1: {Or, 		None, 	C, 		cond_None},
+	0xB2: {Or, 		None, 	D, 		cond_None},
+	0xB3: {Or, 		None, 	E, 		cond_None},
+	0xB4: {Or, 		None, 	H, 		cond_None},
+	0xB5: {Or, 		None, 	L, 		cond_None},
+	0xB6: {Or, 		None, 	HL, 	cond_None},
+	0xB7: {Or, 		None, 	A, 		cond_None},
+	0xB8: {Cp, 		None, 	B, 		cond_None},
+	0xB9: {Cp, 		None, 	C, 		cond_None},
+	0xBA: {Cp, 		None, 	D, 		cond_None},
+	0xBB: {Cp, 		None, 	E, 		cond_None},
+	0xBC: {Cp, 		None, 	H, 		cond_None},
+	0xBD: {Cp, 		None, 	L, 		cond_None},
+	0xBE: {Cp, 		None, 	HL, 	cond_None},
+	0xBF: {Cp, 		None, 	A, 		cond_None},
+	
 	//0xCX
 	0xC0: {Ret, 	None, 	None, 	cond_NZ},
 	0xC1: {Pop, 	BC,		None,  	cond_None},
@@ -285,17 +323,19 @@ var instructions = map[uint8]Instruction{
 	0xD9: {Reti, 	None, 	None, 	cond_None},
 	0xDA: {Jp, 		None, 	nn, 	cond_C},
 	0xDC: {Jp, 		None, 	nn, 	cond_C},
-	0xDE: {Sbc, 	None, 	nn, 	cond_C},
+	0xDE: {Sbc, 	None, 	n, 	cond_C},
 	0xDF: {Rst, 	None, 	None,	cond_None},
 	//0xEX
 	0xE0: {Ldh, 	n_M, 	A, 		cond_None},
 	0xE1: {Pop, 	HL, 	None, 	cond_None},
 	0xE2: {Ldh, 	C_M, 	A, 		cond_None},
 	0xE5: {Push, 	None, 	HL, 	cond_None},
+	0xE6: {And, 	None, 	n, 		cond_None},
 	0xE7: {Push, 	None, 	None, 	cond_None},
 	0xE8: {Add16_8, SP, 	e8,		cond_None},
 	0xE9: {Jp, 		None, 	HL, 	cond_None},
 	0xEA: {Ld8, 	nn_M, 	A, 		cond_None},
+	0xEE: {Xor, 	None, 	n, 		cond_None},
 	0xEF: {Rst, 	None, 	None, 	cond_None},
 	//0xFX
 	0xF0: {Ldh, 	A, 		n_M, 	cond_None},
@@ -303,8 +343,10 @@ var instructions = map[uint8]Instruction{
 	0xF2: {Ldh, 	A, 		C_M, 	cond_None},
 	0xF3: {Di, 		None, 	None, 	cond_None},
 	0xF5: {Push, 	None, 	AF, 	cond_None},
+	0xF6: {Or, 		None, 	n, 		cond_None},
 	0xF7: {Rst, 	None, 	None, 	cond_None},
 	0xFA: {Ld8, 	A, 		nn_M, 	cond_None},
+	0xFE: {Cp, 		None, 	n, 		cond_None},
 	0xFF: {Rst, 	None, 	None, 	cond_None},
 	//TODO: More instructions
 }

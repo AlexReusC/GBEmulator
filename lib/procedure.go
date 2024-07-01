@@ -1,5 +1,7 @@
 package lib
 
+import "fmt"
+
 //TODO: flags behavior
 //TODO: clock behavior
 
@@ -15,11 +17,6 @@ var rstAddress = map[uint8]uint16{
 }
 
 func (c *CPU) Nop() {
-}
-
-func (c *CPU) Xor() {
-	c.Register.a ^= uint8(c.Destination.Value & 0xFF)
-	c.SetFlags(int(c.Register.a), -1, -1, -1)
 }
 
 func (c *CPU) Jp() {
@@ -209,9 +206,30 @@ func (c *CPU) Sbc() {
 	c.SetRegister(A, result)
 }
 
+func (c *CPU) And() {
+	input := uint8(c.Source.Value)
+	result := uint16(c.Register.a & input) 
+	c.SetRegister(A, result)
+}
 
 
+func (c *CPU) Xor() {
+	input := uint8(c.Source.Value)
+	result := uint16(c.Register.a & input) 
+	c.SetRegister(A, result)
+	c.SetFlags(int(c.Register.a), -1, -1, -1)
+}
+
+func (c *CPU) Or() {
+	input := uint8(c.Source.Value)
+	result := uint16(c.Register.a | input) 
+	c.SetRegister(A, result)
+}
 
 
-
+func (c *CPU) Cp() {
+	input := uint8(c.Source.Value)
+	result := uint16(c.Register.a - input) 
+	fmt.Println("Cp ins: ",result)
+}
 
