@@ -15,22 +15,6 @@ func LoadBus(rb *Cart,  c *CPU) (*Bus, error) {
 	return b, nil
 }
 
-func (b *Bus) WramRead(a uint16) uint8 {
-	return b.wram[a-0xC000]
-}
-
-func (b *Bus) WramWrite(a uint16, v uint8) {
-	b.wram[a-0xC000] = v
-}
-
-func (b *Bus) HramRead(a uint16) uint8 {
-	return b.hram[a-0xFF80]
-}
-
-func (b *Bus) HramWrite(a uint16, v uint8) {
-	b.hram[a-0xFF80] = v
-}
-
 func (b *Bus) BusRead(a uint16) uint8 {
 	// ROM data
 	if a < 0x0800 {
@@ -143,4 +127,21 @@ func (b *Bus) BusRead16(a uint16) uint16 {
 func (b *Bus) BusWrite16(a uint16, v uint16) {
 	b.BusWrite(a+1, uint8((v>>8)&0xFF))
 	b.BusWrite(a, uint8(v&0xFF))
+}
+
+
+func (b *Bus) WramRead(a uint16) uint8 {
+	return b.wram[a-0xC000]
+}
+
+func (b *Bus) WramWrite(a uint16, v uint8) {
+	b.wram[a-0xC000] = v
+}
+
+func (b *Bus) HramRead(a uint16) uint8 {
+	return b.hram[a-0xFF80]
+}
+
+func (b *Bus) HramWrite(a uint16, v uint8) {
+	b.hram[a-0xFF80] = v
 }

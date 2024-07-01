@@ -176,14 +176,6 @@ func (c *CPU) Add16_8() {
 	c.SetRegister(c.DestinationTarget, result)
 }
 
-
-func BoolToUint(b bool) uint8 {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 func (c *CPU) Adc() {
 	input := uint8(c.Source.Value)
 	carryBit := BoolToUint(c.GetFlag(cf))
@@ -233,3 +225,8 @@ func (c *CPU) Cp() {
 	fmt.Println("Cp ins: ",result)
 }
 
+func (c *CPU) Cb() {
+	//op := uint8(c.Source.Value)
+	//instruction := instructions[op]
+
+}

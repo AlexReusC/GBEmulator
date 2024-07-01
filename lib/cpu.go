@@ -8,10 +8,10 @@ import (
 type flagRegister = int
 
 const (
-	zf flagRegister 	= 7 	//zero flag 				-> bit 7
-	nf 					= 6 	//substraction flag (BCD) 	-> bit 6
-	hf 					= 5 	//half carry flag (BCD) 	-> bit 5
-	cf					= 4		//carry clag				-> bit 4
+	zf 	flagRegister 	= 7 	//zero flag 				-> bit 7
+	nf 	flagRegister	= 6 	//substraction flag (BCD) 	-> bit 6
+	hf 	flagRegister	= 5 	//half carry flag (BCD) 	-> bit 5
+	cf	flagRegister	= 4		//carry clag				-> bit 4
 )
 
 type registers struct {
@@ -73,6 +73,26 @@ func SetBit(b uint8, n int, c bool) uint8 {
 	return b
 }
 
+func (cpu *CPU) checkCond( ct conditional) (bool, error) {
+	c := cpu.GetFlag(cf)
+	z := cpu.GetFlag(zf)
+
+	switch ct {
+	case cond_None:
+		return true, nil
+	case cond_C:
+		return c, nil
+	case cond_NC:
+		return !c, nil
+	case cond_Z:
+		return z, nil
+	case cond_NZ:
+		return !z, nil
+	default:
+		return false, errors.New("invalid condition")
+	}
+} 
+
 func (c *CPU) SetFlags(flagZ int, flagN int, flagH int, flagC int) {
 	if flagZ != -1{
 		c.Register.f = SetBit(c.Register.f, zf, flagZ > 0)
@@ -114,7 +134,7 @@ func (c *CPU) GetTargetHL() uint16{
 
 func (c *CPU) GetTarget(t target, b *Bus) (Data, error) {
 	switch t {
-		case  A:
+		case A:
 			return Data{uint16(c.Register.a), false}, nil
 		case B:
 			return Data{uint16(c.Register.b), false}, nil
