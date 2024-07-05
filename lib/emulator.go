@@ -8,17 +8,12 @@ func Run() {
 		return
 	}
 
+	bus, err := LoadBus(cart)
 	if err != nil {
 		return
 	}
 
 	cpu, err := LoadCpu()
-	if err != nil {
-		return
-	}
-
-	//Probably should make that the cpu creates the bus
-	bus, err := LoadBus(cart,cpu)
 	if err != nil {
 		return
 	}

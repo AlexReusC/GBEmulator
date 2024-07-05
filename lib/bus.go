@@ -4,13 +4,13 @@ import "fmt"
 
 type Bus struct {
 	cart *Cart
-	cpu *CPU
 	wram [0x2000]uint8
 	hram [0x80]uint8
+	ieRegister uint8
 }
 
-func LoadBus(rb *Cart,  c *CPU) (*Bus, error) {
-	b := &Bus{cart: rb, cpu: c}
+func LoadBus(rb *Cart) (*Bus, error) {
+	b := &Bus{cart: rb}
 
 	return b, nil
 }
@@ -60,7 +60,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
-		return b.cpu.GetIeRegister()
+		return b.GetIeRegister()
 	}
 	return 0
 }
@@ -111,7 +111,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
-		b.cpu.SetIeRegister(v)
+		b.SetIeRegister(v)
 		return
 	}
 
@@ -144,4 +144,12 @@ func (b *Bus) HramRead(a uint16) uint8 {
 
 func (b *Bus) HramWrite(a uint16, v uint8) {
 	b.hram[a-0xFF80] = v
+}
+
+func (b *Bus) GetIeRegister() uint8 {
+	return b.ieRegister
+}
+
+func (b *Bus) SetIeRegister(ir uint8) {
+	b.ieRegister = ir
 }

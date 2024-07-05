@@ -1,6 +1,8 @@
 package lib
 
-import "fmt"
+import (
+	"fmt"
+)
 
 //TODO: flags behavior
 //TODO: clock behavior
@@ -178,7 +180,7 @@ func (c *CPU) Add16_8() {
 
 func (c *CPU) Adc() {
 	input := uint8(c.Source.Value)
-	carryBit := BoolToUint(c.GetFlag(cf))
+	carryBit := BoolToUint(c.GetFlag(flagC))
 
 	result := uint16(c.Register.a + input + carryBit)
 	c.SetRegister(A, result)
@@ -192,7 +194,7 @@ func (c *CPU) Sub() {
 
 func (c *CPU) Sbc() {
 	input := uint8(c.Source.Value)
-	carryBit := BoolToUint(c.GetFlag(cf))
+	carryBit := BoolToUint(c.GetFlag(flagC))
 
 	result := uint16(c.Register.a - input - carryBit)
 	c.SetRegister(A, result)
@@ -222,11 +224,134 @@ func (c *CPU) Or() {
 func (c *CPU) Cp() {
 	input := uint8(c.Source.Value)
 	result := uint16(c.Register.a - input) 
+	//TODO: flags
 	fmt.Println("Cp ins: ",result)
 }
 
-func (c *CPU) Cb() {
-	//op := uint8(c.Source.Value)
-	//instruction := instructions[op]
+func (c *CPU) Rlc(input uint16, t target) {
+	msbOn := input & 0x80 //128
+	modifiedVal := input << 1
+	if(msbOn != 0){
+		 modifiedVal |= 0x1
+	}
+	c.SetRegister(t, modifiedVal)
+	//set flags
+}
 
+func (c *CPU) Rrc(input uint16, t target) {
+	lsbOn := input & 0x01
+	modifiedVal := input >> 1
+	if(lsbOn != 0){
+		modifiedVal |= 0x80
+	}
+	c.SetRegister(t, modifiedVal)
+	//set flags
+}
+
+func (c *CPU) Rl(input uint16, t target) {
+	//TODO: remove when implementing flags
+	//msbOn := input & 0x80
+	modifiedVal := input << 1
+	if (c.GetFlag(flagC)){
+		modifiedVal |= 0x01
+	}
+	c.SetRegister(t, modifiedVal)
+	//Set flags
+}
+
+func (c *CPU) Rr(input uint16, t target) {
+	//TODO: remove when implementing flags
+	//lsbOn := input & 0x01
+	modifiedVal := input >> 1
+	if (c.GetFlag(flagC)){
+		modifiedVal |= 0x80
+	}
+	c.SetRegister(t, modifiedVal)
+	//Set flags
+}
+
+func (c *CPU) Sla(input uint16, t target) {
+	//TODO
+	//msbOn := input & 0x80
+	modifiedVal := input << 1
+	c.SetRegister(t, modifiedVal)
+	//Set flags
+}
+
+func (c *CPU) Sra(input uint16, t target) {
+	//TODO: remove when implementing flags
+	msbOn := input & 0x80
+	//lsbOn := input & 0x01
+	modifiedVal := msbOn | (input >> 1)
+	c.SetRegister(t, modifiedVal)
+	//Set flags
+}
+
+func (c *CPU) Swap(input uint16, t target) {
+	modifiedVal := ((input & 0x0F) << 4) | ((input & 0xF0) >> 4)
+	c.SetRegister(t, modifiedVal)
+	//Set flags
+}
+
+func (c *CPU) Srl(input uint16, t target) {
+	//TODO: remove when implementing flags
+	//lsbOn := input & 0x01
+	modifiedVal := input >> 0x01
+	c.SetRegister(t, modifiedVal)
+}
+
+func (c *CPU) Bit(input uint16, t target, b uint8) {
+	//TODO: flags
+}
+
+func (c *CPU) Res(input uint16, t target, b uint8) {
+	modifiedVal := input & ^(0x01 << b)
+	c.SetRegister(t, modifiedVal)
+	//TODO: flags
+}
+
+func (c *CPU) Set(input uint16, t target, b uint8) {
+	modifiedVal := input | (0x01 << b)
+	c.SetRegister(t, modifiedVal)
+	//TODO: flags
+}
+
+
+func (c *CPU) Cb(b *Bus) error {
+	op := uint8(c.Source.Value)
+	instruction := cbOpcodes[op]
+
+	data, err := c.GetTarget(instruction.Register, b)
+	if err != nil{
+		return err
+	}
+
+	input, _ := data.Value, data.IsAddr
+
+	switch instruction.Instruction{
+		case Rlc:
+			c.Rlc(input, instruction.Register)
+		case Rrc:
+			c.Rrc(input, instruction.Register)
+		case Rl:
+			c.Rl(input, instruction.Register)
+		case Rr:
+			c.Rr(input, instruction.Register)
+		case Sla:
+			c.Sla(input, instruction.Register)
+		case Sra:
+			c.Sra(input, instruction.Register)	
+		case Swap:
+			c.Swap(input, instruction.Register)
+		case Srl:
+			c.Srl(input, instruction.Register)
+		case Bit:
+			c.Bit(input, instruction.Register, instruction.Bit)
+		case Res:
+			c.Res(input, instruction.Register, instruction.Bit)
+		case Set:
+			c.Set(input, instruction.Register, instruction.Bit)
+	}
+
+	return nil
 }

@@ -8,10 +8,10 @@ import (
 type flagRegister = int
 
 const (
-	zf 	flagRegister 	= 7 	//zero flag 				-> bit 7
-	nf 	flagRegister	= 6 	//substraction flag (BCD) 	-> bit 6
-	hf 	flagRegister	= 5 	//half carry flag (BCD) 	-> bit 5
-	cf	flagRegister	= 4		//carry clag				-> bit 4
+	flagZ 	flagRegister 	= 7 	//zero flag 				-> bit 7
+	flagN 	flagRegister	= 6 	//substraction flag (BCD) 	-> bit 6
+	flagH 	flagRegister	= 5 	//half carry flag (BCD) 	-> bit 5
+	flagC	flagRegister	= 4		//carry clag				-> bit 4
 )
 
 type registers struct {
@@ -74,8 +74,8 @@ func SetBit(b uint8, n int, c bool) uint8 {
 }
 
 func (cpu *CPU) checkCond( ct conditional) (bool, error) {
-	c := cpu.GetFlag(cf)
-	z := cpu.GetFlag(zf)
+	c := cpu.GetFlag(flagC)
+	z := cpu.GetFlag(flagZ)
 
 	switch ct {
 	case cond_None:
@@ -95,16 +95,16 @@ func (cpu *CPU) checkCond( ct conditional) (bool, error) {
 
 func (c *CPU) SetFlags(flagZ int, flagN int, flagH int, flagC int) {
 	if flagZ != -1{
-		c.Register.f = SetBit(c.Register.f, zf, flagZ > 0)
+		c.Register.f = SetBit(c.Register.f, flagZ, flagZ > 0)
 	}
 	if flagN != -1{
-		c.Register.f = SetBit(c.Register.f, nf, flagN > 0)
+		c.Register.f = SetBit(c.Register.f, flagN, flagN > 0)
 	}
 	if flagH != -1{
-		c.Register.f = SetBit(c.Register.f, hf, flagH > 0)
+		c.Register.f = SetBit(c.Register.f, flagH, flagH > 0)
 	}
 	if flagC != -1{
-		c.Register.f = SetBit(c.Register.f, cf, flagC > 0)
+		c.Register.f = SetBit(c.Register.f, flagC, flagC > 0)
 	}
 } 
 
@@ -230,6 +230,8 @@ func (c *CPU) SetRegister(t target, v uint16)  {
 		case HL:
 			c.Register.h = uint8((v & 0xFF00) >> 8)
 			c.Register.l = uint8(v & 0xFF)
+		//TODO:
+		//case HL_M:
 		case SP:
 			c.Register.sp = v
 		default:
@@ -238,6 +240,7 @@ func (c *CPU) SetRegister(t target, v uint16)  {
 	}
 }
 
+//dont like sending bus too deep into functions, probably will change
 func (cpu *CPU) Step(b *Bus) error {
 	cpu.currentOpcode = b.BusRead(cpu.Register.pc)
 	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
@@ -248,6 +251,8 @@ func (cpu *CPU) Step(b *Bus) error {
 	//TODO: logging for flags
 	fmt.Printf("Inst: %-6s Dest: %-6s Src: %-6s A: %02x BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
 	cpu.Register.pc += 1
+
+	//probably will move this logic
 
 	//Get destination, including inmediate
 	data, err := cpu.GetTarget(instruction.Destination, b)
@@ -320,6 +325,11 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Sbc()	
 		case Xor:
 			cpu.Xor()
+		case Cb:
+			err := cpu.Cb(b)
+			if err != nil{
+				return err
+			}
 		default:
 			return errors.New("invalid instruction")
 	}

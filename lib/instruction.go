@@ -306,6 +306,7 @@ var instructions = map[uint8]Instruction{
 	0xC8: {Ret, None, None, cond_Z},
 	0xC9: {Ret, None, None, cond_None},
 	0xCA: {Jp, None, nn, cond_Z},
+	0xCb: {Cb, None, nn, cond_None},
 	0xCC: {Call, None, nn, cond_Z},
 	0xCD: {Call, None, nn, cond_None},
 	0xCE: {Adc, None, n, cond_None},
@@ -385,7 +386,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x1D: {Rr, L, 0},
 	0x1F: {Rr, HL_M, 0},
 	0x1E: {Rr, A, 0},
-	// 0x
+	// 0x2X
 	0x20: {Sla, B, 0},
 	0x21: {Sla, C, 0},
 	0x22: {Sla, D, 0},
@@ -402,7 +403,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x2D: {Sra, L, 0},
 	0x2E: {Sra, HL_M, 0},
 	0x2F: {Sra, A, 0},
-	// 0x
+	// 0x3X
 	0x30: {Swap, B, 0},
 	0x31: {Swap, C, 0},
 	0x32: {Swap, D, 0},
@@ -419,7 +420,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x3D: {Srl, L, 0},
 	0x3E: {Srl, HL_M, 0},
 	0x3F: {Srl, A, 0},
-	//0x4
+	//0x4X
 	0x40: {Bit, B, 0},
 	0x41: {Bit, C, 0},
 	0x42: {Bit, D, 0},
@@ -436,7 +437,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x4D: {Bit, L, 1},
 	0x4E: {Bit, HL_M, 1},
 	0x4F: {Bit, A, 1},
-	//0x5
+	//0x5X
 	0x50: {Bit, B, 2},
 	0x51: {Bit, C, 2},
 	0x52: {Bit, D, 2},
@@ -453,7 +454,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x5D: {Bit, L, 3},
 	0x5E: {Bit, HL_M, 3},
 	0x5F: {Bit, A, 3},
-	//0x6
+	//0x6X
 	0x60: {Bit, B, 4},
 	0x61: {Bit, C, 4},
 	0x62: {Bit, D, 4},
@@ -470,7 +471,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x6D: {Bit, L, 5},
 	0x6E: {Bit, HL_M, 5},
 	0x6F: {Bit, A, 5},
-	//0x7
+	//0x7X
 	0x70: {Bit, B, 6},
 	0x71: {Bit, C, 6},
 	0x72: {Bit, D, 6},
@@ -487,8 +488,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x7D: {Bit, L, 7},
 	0x7E: {Bit, HL_M, 7},
 	0x7F: {Bit, A, 7},
-
-	//0x8
+	//0x8X
 	0x80: {Res, B, 0},
 	0x81: {Res, C, 0},
 	0x82: {Res, D, 0},
@@ -505,7 +505,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x8D: {Res, L, 1},
 	0x8E: {Res, HL_M, 1},
 	0x8F: {Res, A, 1},
-	//0x9
+	//0x9X
 	0x90: {Res, B, 2},
 	0x91: {Res, C, 2},
 	0x92: {Res, D, 2},
@@ -522,7 +522,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0x9D: {Res, L, 3},
 	0x9E: {Res, HL_M, 3},
 	0x9F: {Res, A, 3},
-	//0xA
+	//0xAX
 	0xA0: {Res, B, 4},
 	0xA1: {Res, C, 4},
 	0xA2: {Res, D, 4},
@@ -539,7 +539,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0xAD: {Res, L, 5},
 	0xAE: {Res, HL_M, 5},
 	0xAF: {Res, A, 5},
-	//0xB
+	//0xBX
 	0xB0: {Res, B, 6},
 	0xB1: {Res, C, 6},
 	0xB2: {Res, D, 6},
@@ -556,8 +556,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0xBD: {Res, L, 7},
 	0xBE: {Res, HL_M, 7},
 	0xBF: {Res, A, 7},
-
-	//0xC
+	//0xCX
 	0xC0: {Set, B, 0},
 	0xC1: {Set, C, 0},
 	0xC2: {Set, D, 0},
@@ -574,8 +573,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0xCD: {Set, L, 1},
 	0xCE: {Set, HL_M, 1},
 	0xCF: {Set, A, 1},
-
-	//0xD
+	//0xDX
 	0xD0: {Set, B, 2},
 	0xD1: {Set, C, 2},
 	0xD2: {Set, D, 2},
@@ -592,7 +590,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0xDD: {Set, L, 3},
 	0xDE: {Set, HL_M, 3},
 	0xDF: {Set, A, 3},
-	//0xE
+	//0xEX
 	0xE0: {Set, B, 4},
 	0xE1: {Set, C, 4},
 	0xE2: {Set, D, 4},
@@ -609,7 +607,7 @@ var cbOpcodes = map[uint8]CbOpcode{
 	0xED: {Set, L, 5},
 	0xEE: {Set, HL_M, 5},
 	0xEF: {Set, A, 5},
-	//0xF
+	//0xFX
 	0xF0: {Set, B, 6},
 	0xF1: {Set, C, 6},
 	0xF2: {Set, D, 6},
