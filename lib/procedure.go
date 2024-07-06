@@ -326,7 +326,10 @@ func (c *CPU) Cb(b *Bus) error {
 		return err
 	}
 
-	input, _ := data.Value, data.IsAddr
+	input := data.Value
+	if data.IsAddr {
+		input = uint16(b.BusRead(data.Value))
+	}
 
 	switch instruction.Instruction{
 		case Rlc:
