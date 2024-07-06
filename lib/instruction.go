@@ -32,6 +32,16 @@ const (
 	Or      procedure = "Or"
 	Cp      procedure = "Cp"
 	Cb      procedure = "Cb"
+	Rlca    procedure = "Rlca"
+	Rrca    procedure = "Rrca"
+	Stop    procedure = "Stop"
+	Rla     procedure = "Rla"
+	Rra     procedure = "Rra"
+	Daa     procedure = "Daa"
+	Cpl     procedure = "Cpl"
+	Scf     procedure = "Scf"
+	Ccf     procedure = "Ccf"
+	Ei      procedure = "Ei"
 )
 
 const (
@@ -106,6 +116,7 @@ var instructions = map[uint8]Instruction{
 	0x04: {Inc, None, B, cond_None},
 	0x05: {Dec, None, B, cond_None},
 	0x06: {Ld8, B, n, cond_None},
+	0x07: {Rlca, None, None, cond_None},
 	0x08: {Ld16, nn_M, SP, cond_None},
 	0x09: {AddHl, HL, BC, cond_None},
 	0x0A: {Ld8, A, BC_M, cond_None},
@@ -113,13 +124,16 @@ var instructions = map[uint8]Instruction{
 	0x0C: {Inc, None, C, cond_None},
 	0x0D: {Dec, None, C, cond_None},
 	0x0E: {Ld8, C, n, cond_None},
+	0x0F: {Rrca, None, None, cond_None},
 	// 0x1X
+	0x10: {Stop, None, None, cond_None},
 	0x11: {Ld16, DE, nn, cond_None},
 	0x12: {Ld8, DE_M, A, cond_None},
 	0x13: {Inc, None, DE, cond_None},
 	0x14: {Inc, None, D, cond_None},
 	0x15: {Dec, None, D, cond_None},
 	0x16: {Ld8, D, n, cond_None},
+	0x17: {Rla, None, None, cond_None},
 	0x18: {Jr, None, n, cond_None},
 	0x19: {AddHl, HL, DE, cond_None},
 	0x1A: {Ld8, A, DE_M, cond_None},
@@ -135,6 +149,7 @@ var instructions = map[uint8]Instruction{
 	0x24: {Inc, None, H, cond_None},
 	0x25: {Dec, None, H, cond_None},
 	0x26: {Ld8, H, n, cond_None},
+	0x27: {Daa, None, None, cond_None},
 	0x28: {Jr, None, n, cond_Z},
 	0x29: {AddHl, HL, HL, cond_None},
 	0x2A: {Ld8, A, HLP_M, cond_None},
@@ -142,6 +157,7 @@ var instructions = map[uint8]Instruction{
 	0x2C: {Inc, None, L, cond_None},
 	0x2D: {Dec, None, L, cond_None},
 	0x2E: {Ld8, L, n, cond_None},
+	0x2F: {Cpl, None, None, cond_None},
 	// 0x3X
 	0x30: {Jr, None, n, cond_NC},
 	0x31: {Ld16, SP, nn, cond_None},
@@ -150,6 +166,7 @@ var instructions = map[uint8]Instruction{
 	0x34: {Inc, None, HL_M, cond_None},
 	0x35: {Dec, None, HL_M, cond_None},
 	0x36: {Ld8, HL_M, n, cond_None},
+	0x37: {Scf, None, None, cond_None},
 	0x38: {Jr, None, n, cond_C},
 	0x39: {AddHl, HL, SP, cond_None},
 	0x3A: {Ld8, A, HLM_M, cond_None},
@@ -157,6 +174,7 @@ var instructions = map[uint8]Instruction{
 	0x3C: {Inc, None, A, cond_None},
 	0x3D: {Dec, None, A, cond_None},
 	0x3E: {Ld8, A, n, cond_None},
+	0x3F: {Ccf, None, None, cond_None},
 	//0x4X
 	0x41: {Ld8, B, B, cond_None},
 	0x42: {Ld8, B, C, cond_None},
@@ -346,6 +364,7 @@ var instructions = map[uint8]Instruction{
 	0xF6: {Or, None, n, cond_None},
 	0xF7: {Rst, None, None, cond_None},
 	0xFA: {Ld8, A, nn_M, cond_None},
+	0xFB: {Ei, None, None, cond_None},
 	0xFE: {Cp, None, n, cond_None},
 	0xFF: {Rst, None, None, cond_None},
 	//TODO: More instructions
