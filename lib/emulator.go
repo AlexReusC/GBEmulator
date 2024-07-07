@@ -2,6 +2,7 @@ package lib
 
 import "fmt"
 
+//TODO: Change to class emulator
 func Run() {
 	cart, err := LoadCart()
 	if err != nil {

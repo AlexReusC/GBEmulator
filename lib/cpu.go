@@ -289,6 +289,8 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Jr()
 		case Di:
 			cpu.Di()
+		case Ei:
+			cpu.Ei()
 		case Ld8:
 			cpu.Ld8(b)
 		case Ld16:
@@ -325,6 +327,22 @@ func (cpu *CPU) Step(b *Bus) error {
 			cpu.Sbc()	
 		case Xor:
 			cpu.Xor()
+		case Daa:
+			cpu.Daa()
+		case Rlca:
+			cpu.Rlca()
+		case Rla:
+			cpu.Rla()
+		case Rrca:
+			cpu.Rrca()
+		case Rra:
+			cpu.Rra()
+		case Ccf:
+			cpu.Ccf()
+		case Cpl:
+			cpu.Cpl()
+		case Scf:
+			cpu.Scf()
 		case Cb:
 			err := cpu.Cb(b)
 			if err != nil{

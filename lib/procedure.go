@@ -35,9 +35,7 @@ func (c *CPU) Jr() {
 	}
 }
 
-func (c *CPU) Di() {
-	c.InterruptorMasterEnabled = false
-}
+
 
 func (c *CPU) Ld8(b *Bus) {
 	var input uint8
@@ -146,6 +144,93 @@ func (c *CPU) Rst(b *Bus) {
 	b.BusWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
 
 	c.Register.pc = (0x00 << 8) | rstAddress[c.currentOpcode]
+}
+
+func (c *CPU) Di() {
+	c.InterruptorMasterEnabled = false
+}
+
+func (c *CPU) Ei() {
+	//TODO: Implement this when adding threads
+}
+
+//https://blog.ollien.com/posts/gb-daa/
+func (c *CPU) Daa() {
+	modifiedVal := c.Register.a
+	if (c.GetFlag(flagN)){ //after substraction
+		if (c.GetFlag(flagC) || modifiedVal > 0x99){
+			modifiedVal += 0x60
+			//TODO: flag c
+		}
+		if (c.GetFlag(flagH) || (modifiedVal & 0x0F) > 0x09){
+			modifiedVal += 0x06
+		}
+	} else { //after addition
+		if (c.GetFlag(flagC)){
+			modifiedVal -= 0x60
+		}
+		if (c.GetFlag(flagH)){
+			modifiedVal -= 0x6
+		}
+	}
+	c.SetRegister(A, uint16(modifiedVal))
+	//TODO: flags
+}
+
+func (c *CPU) Rlca() {
+	msbOn := c.Register.a & 0x80 //128
+	modifiedVal := c.Register.a << 1
+	if(msbOn != 0){
+		 modifiedVal |= 0x1
+	}
+	c.SetRegister(A, uint16(modifiedVal))
+
+	//TODO: set flags
+}
+func (c *CPU) Rrca() {
+	lsbOn := c.Register.a & 0x01
+	modifiedVal := c.Register.a >> 1
+	if(lsbOn != 0){
+		modifiedVal |= 0x80
+	}
+	c.SetRegister(A, uint16(modifiedVal))
+	//TODO: set flags
+}
+
+func (c *CPU) Rla() {
+	//TODO: remove when implementing flags
+	//msbOn := c.Register.a & 0x80
+	modifiedVal := c.Register.a << 1
+	if (c.GetFlag(flagC)){
+		modifiedVal |= 0x01
+	}
+	c.SetRegister(A, uint16(modifiedVal))
+	//TODO: set flags
+}
+
+func (c *CPU) Rra() {
+	//TODO: remove when implementing flags
+	//lsbOn := c.Register.a & 0x01
+	modifiedVal := c.Register.a >> 1
+	if (c.GetFlag(flagC)){
+		modifiedVal |= 0x80
+	}
+	c.SetRegister(A, uint16(modifiedVal))
+	//TODO: set flags
+}
+
+func (c *CPU) Cpl() {
+	modifiedVal := ^c.Register.a
+	c.SetRegister(A, uint16(modifiedVal))
+	 //TODO: set flags
+}
+
+func (c *CPU) Ccf() {
+	 //TODO: set flags
+}
+
+func (c *CPU) Scf() {
+	 //TODO: set flags
 }
 
 func (c *CPU) Inc() {
