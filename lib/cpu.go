@@ -34,6 +34,7 @@ type Data struct {
 
 type CPU struct {
 	Register registers
+	Bus *Bus
 
 	Source Data
 	Destination Data
@@ -43,21 +44,36 @@ type CPU struct {
 	currentOpcode uint8
 
 	InterruptorMasterEnabled bool
-	IeRegister uint8
 }
 
-func LoadCpu() (*CPU, error) {
-	c := &CPU{Register: registers{pc: 0x0100, a: 0x01}}
+func LoadCpu(b *Bus) (*CPU, error) {
+	c := &CPU{Register: registers{pc: 0x0100, a: 0x01}, Bus: b}
 
 	return c, nil
 }
 
 func (c *CPU) GetIeRegister() uint8 {
-	return c.IeRegister
+	return c.Bus.ieRegister
 }
 
 func (c *CPU) SetIeRegister(n uint8) {
-	c.IeRegister = n
+	c.Bus.ieRegister = n
+}
+
+func (c *CPU) BusRead(a uint16) uint8 {
+	return c.Bus.BusRead(a)
+}
+
+func (c *CPU) BusRead16(a uint16) uint16 {
+	return c.Bus.BusRead16(a)
+}
+
+func (c *CPU) BusWrite(a uint16, v uint8) {
+	c.Bus.BusWrite(a, v)
+}
+
+func (c *CPU) BusWrite16(a uint16, v uint16) {
+	c.Bus.BusWrite16(a, v)
 }
 
 func (c *CPU) GetFlag(flag flagRegister) bool {
@@ -132,7 +148,7 @@ func (c *CPU) GetTargetHL() uint16{
 	return (hi << 8 | lo)
 }
 
-func (c *CPU) GetTarget(t target, b *Bus) (Data, error) {
+func (c *CPU) GetTarget(t target) (Data, error) {
 	switch t {
 		case A:
 			return Data{uint16(c.Register.a), false}, nil
@@ -161,11 +177,11 @@ func (c *CPU) GetTarget(t target, b *Bus) (Data, error) {
 		case SP:
 			return Data{c.Register.sp, false}, nil
 		case n:
-			n := uint16(b.BusRead(c.Register.pc))
+			n := uint16(c.BusRead(c.Register.pc))
 			c.Register.pc += 1
 			return Data{n, false}, nil
 		case nn:		
-			nn := b.BusRead16(c.Register.pc)
+			nn := c.BusRead16(c.Register.pc)
 			c.Register.pc += 2
 			return Data{nn, false}, nil
 		case C_M:
@@ -185,11 +201,11 @@ func (c *CPU) GetTarget(t target, b *Bus) (Data, error) {
 			c.SetRegister(HL, val - 1)
 			return Data{val, true}, nil 
 		case n_M:
-			n := uint16(b.BusRead(c.Register.pc))
+			n := uint16(c.BusRead(c.Register.pc))
 			c.Register.pc += 1
 			return Data{n, true}, nil
 		case nn_M:
-			nn := b.BusRead16(c.Register.pc)
+			nn := c.BusRead16(c.Register.pc)
 			c.Register.pc += 2
 			return Data{nn, true}, nil
 		case None:
@@ -230,8 +246,8 @@ func (c *CPU) SetRegister(t target, v uint16)  {
 		case HL:
 			c.Register.h = uint8((v & 0xFF00) >> 8)
 			c.Register.l = uint8(v & 0xFF)
-		//TODO:
-		//case HL_M:
+		case HL_M:
+			c.BusWrite(c.GetTargetHL(), uint8(v))
 		case SP:
 			c.Register.sp = v
 		default:
@@ -241,9 +257,9 @@ func (c *CPU) SetRegister(t target, v uint16)  {
 }
 
 //dont like sending bus too deep into functions, probably will change
-func (cpu *CPU) Step(b *Bus) error {
-	cpu.currentOpcode = b.BusRead(cpu.Register.pc)
-	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, b.BusRead(cpu.Register.pc+1), b.BusRead(cpu.Register.pc+2))
+func (cpu *CPU) Step() error {
+	cpu.currentOpcode = cpu.BusRead(cpu.Register.pc)
+	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, cpu.BusRead(cpu.Register.pc+1), cpu.BusRead(cpu.Register.pc+2))
 	instruction, ok := instructions[cpu.currentOpcode]
 	if !ok {
 		return errors.New("opcode not implemented")
@@ -255,7 +271,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	//probably will move this logic
 
 	//Get destination, including inmediate
-	data, err := cpu.GetTarget(instruction.Destination, b)
+	data, err := cpu.GetTarget(instruction.Destination)
 	if err != nil{
 		return err
 	}
@@ -264,7 +280,7 @@ func (cpu *CPU) Step(b *Bus) error {
 	
 
 	//Get source, including inmediate
-	data, err = cpu.GetTarget(instruction.Source, b)
+	data, err = cpu.GetTarget(instruction.Source)
 	if err != nil{
 		return err
 	}
@@ -292,23 +308,23 @@ func (cpu *CPU) Step(b *Bus) error {
 		case Ei:
 			cpu.Ei()
 		case Ld8:
-			cpu.Ld8(b)
+			cpu.Ld8()
 		case Ld16:
-			cpu.Ld16(b)
+			cpu.Ld16()
 		case Ldh:
-			cpu.Ldh(b)
+			cpu.Ldh()
 		case Push:
-			cpu.Push(b)
+			cpu.Push()
 		case Pop:
-			cpu.Pop(b)
+			cpu.Pop()
 		case Call:
-			cpu.Call(b)
+			cpu.Call()
 		case Ret:
-			cpu.Ret(b)
+			cpu.Ret()
 		case Reti:
-			cpu.Reti(b)
+			cpu.Reti()
 		case Rst:
-			cpu.Rst(b)
+			cpu.Rst()
 		case Inc:
 			cpu.Inc()
 		case Dec:
@@ -344,7 +360,7 @@ func (cpu *CPU) Step(b *Bus) error {
 		case Scf:
 			cpu.Scf()
 		case Cb:
-			err := cpu.Cb(b)
+			err := cpu.Cb()
 			if err != nil{
 				return err
 			}

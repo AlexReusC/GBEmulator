@@ -14,13 +14,13 @@ func Run() {
 		return
 	}
 
-	cpu, err := LoadCpu()
+	cpu, err := LoadCpu(bus)
 	if err != nil {
 		return
 	}
 
 	for {
-		err := cpu.Step(bus)
+		err := cpu.Step()
 		if err != nil {
 			fmt.Println(err)
 			return

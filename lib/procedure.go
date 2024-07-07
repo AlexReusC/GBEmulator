@@ -37,17 +37,17 @@ func (c *CPU) Jr() {
 
 
 
-func (c *CPU) Ld8(b *Bus) {
+func (c *CPU) Ld8() {
 	var input uint8
 
 	if c.Source.IsAddr {
-		input = b.BusRead(c.Source.Value)
+		input = c.BusRead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
 
 	if c.Destination.IsAddr {
-		b.BusWrite(c.Destination.Value, input)
+		c.BusWrite(c.Destination.Value, input)
 	} else {
 		c.SetRegister(c.DestinationTarget, uint16(input))
 	}
@@ -55,81 +55,81 @@ func (c *CPU) Ld8(b *Bus) {
 	//TODO: (HL) SP+e instruction
 }
 
-func (c *CPU) Ld16(b *Bus) {
+func (c *CPU) Ld16() {
 	//Ld16 has no addresses in load
 	if c.Destination.IsAddr {
-		b.BusWrite16(c.Destination.Value, c.Source.Value)
+		c.BusWrite16(c.Destination.Value, c.Source.Value)
 	} else {
 		c.SetRegister(c.DestinationTarget, c.Source.Value)
 	}
 }
 
-func (c *CPU) Ldh(b *Bus) {
+func (c *CPU) Ldh() {
 	var input uint8
 
 	if c.Source.IsAddr {
-		input = b.BusRead(0xFF00 | uint16(b.BusRead(c.Source.Value)))
+		input = c.BusRead(0xFF00 | uint16(c.BusRead(c.Source.Value)))
 	} else {
 		input = uint8(c.Source.Value)
 	}
 
 	if c.Destination.IsAddr {
-		b.BusWrite(0xFF00|c.Destination.Value, input)
+		c.BusWrite(0xFF00|c.Destination.Value, input)
 	} else {
 		c.SetRegister(A, uint16(input)) //If destination is not address is always register A
 	}
 }
 
-func (c *CPU) Push(b *Bus) {
+func (c *CPU) Push() {
 	c.Register.sp -= 1
-	b.BusWrite(c.Register.sp, uint8((c.Source.Value&0xFF00)>>8))
+	c.BusWrite(c.Register.sp, uint8((c.Source.Value&0xFF00)>>8))
 
 	c.Register.sp -= 1
-	b.BusWrite(c.Register.sp, uint8(c.Source.Value&0xFF))
+	c.BusWrite(c.Register.sp, uint8(c.Source.Value&0xFF))
 }
 
-func (c *CPU) Pop(b *Bus) {
-	lo := uint16(b.BusRead(c.Register.sp))
+func (c *CPU) Pop() {
+	lo := uint16(c.BusRead(c.Register.sp))
 	c.Register.sp += 1
 
-	hi := uint16(b.BusRead(c.Register.sp))
+	hi := uint16(c.BusRead(c.Register.sp))
 	c.Register.sp += 1
 
 	c.SetRegister(c.DestinationTarget, (hi<<8)|lo)
 }
 
-func (c *CPU) Call(b *Bus) {
+func (c *CPU) Call() {
 	if c.CurrentConditionResult {
 		//Push pc
 		c.Register.sp -= 1
-		b.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
+		c.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 		c.Register.sp -= 1
-		b.BusWrite(c.Register.sp, uint8(c.Register.pc&0x00FF))
+		c.BusWrite(c.Register.sp, uint8(c.Register.pc&0x00FF))
 
 		//Jp nn
 		c.Register.pc = c.Source.Value
 	}
 }
 
-func (c *CPU) Ret(b *Bus) {
+func (c *CPU) Ret() {
 	if c.CurrentConditionResult {
 		//Pop
-		lo := uint16(b.BusRead(c.Register.sp))
+		lo := uint16(c.BusRead(c.Register.sp))
 		c.Register.sp += 1
 
-		hi := uint16(b.BusRead(c.Register.sp))
+		hi := uint16(c.BusRead(c.Register.sp))
 		c.Register.sp += 1
 		//Jp
 		c.Register.pc = (hi << 8) | lo
 	}
 }
 
-func (c *CPU) Reti(b *Bus) {
+func (c *CPU) Reti() {
 	//Pop
-	lo := uint16(b.BusRead(c.Register.sp))
+	lo := uint16(c.BusRead(c.Register.sp))
 	c.Register.sp += 1
 
-	hi := uint16(b.BusRead(c.Register.sp))
+	hi := uint16(c.BusRead(c.Register.sp))
 	c.Register.sp += 1
 	//Jp
 	c.Register.pc = (hi << 8) | lo
@@ -137,11 +137,11 @@ func (c *CPU) Reti(b *Bus) {
 	c.InterruptorMasterEnabled = true
 }
 
-func (c *CPU) Rst(b *Bus) {
+func (c *CPU) Rst() {
 	c.Register.sp -= 1
-	b.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
+	c.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 	c.Register.sp -= 1
-	b.BusWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
+	c.BusWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
 
 	c.Register.pc = (0x00 << 8) | rstAddress[c.currentOpcode]
 }
@@ -402,18 +402,18 @@ func (c *CPU) Set(input uint16, t target, b uint8) {
 }
 
 
-func (c *CPU) Cb(b *Bus) error {
+func (c *CPU) Cb() error {
 	op := uint8(c.Source.Value)
 	instruction := cbOpcodes[op]
 
-	data, err := c.GetTarget(instruction.Register, b)
+	data, err := c.GetTarget(instruction.Register)
 	if err != nil{
 		return err
 	}
 
 	input := data.Value
 	if data.IsAddr {
-		input = uint16(b.BusRead(data.Value))
+		input = uint16(c.BusRead(data.Value))
 	}
 
 	switch instruction.Instruction{
