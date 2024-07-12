@@ -3,6 +3,8 @@ package lib
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
 )
 
 type flagRegister = int
@@ -35,6 +37,7 @@ type Data struct {
 type CPU struct {
 	Register registers
 	Bus *Bus
+	Debug *Debug
 
 	Source Data
 	Destination Data
@@ -46,8 +49,23 @@ type CPU struct {
 	InterruptorMasterEnabled bool
 }
 
-func LoadCpu(b *Bus) (*CPU, error) {
-	c := &CPU{Register: registers{pc: 0x0100, a: 0x01}, Bus: b}
+func LoadCpu(b *Bus, d *Debug) (*CPU, error) {
+	c := &CPU{
+		Register: registers{
+			a: 	0x01,
+			b: 	0x00,
+			c: 	0x13, 
+			d:	0x00, 
+			e: 	0xD8, 
+			h:	0x01, 
+			l:	0x4D, 
+			f: 	0xB0, 
+			pc: 0x0100, 
+			sp: 0xFFFE,
+			}, 
+		Bus: b, 
+		Debug: d,
+	}
 
 	return c, nil
 }
@@ -81,7 +99,7 @@ func (c *CPU) GetFlag(flag flagRegister) bool {
 }
 
 //dont like sending bus too deep into functions, probably will change
-func (cpu *CPU) Step() error {
+func (cpu *CPU) Step(file *os.File) error {
 	cpu.currentOpcode = cpu.BusRead(cpu.Register.pc)
 	fmt.Printf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, cpu.BusRead(cpu.Register.pc+1), cpu.BusRead(cpu.Register.pc+2))
 	instruction, ok := instructions[cpu.currentOpcode]
@@ -90,7 +108,13 @@ func (cpu *CPU) Step() error {
 	}
 	
 	flags := fmt.Sprintf("%c%c%c%c", cpu.FormatFlag(flagZ, 'Z'), cpu.FormatFlag(flagN, 'N'), cpu.FormatFlag(flagH, 'H'), cpu.FormatFlag(flagC, 'C'))
-	fmt.Printf("Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x\n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, flags, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l)
+	output := fmt.Sprintf("Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x SP: %x \n", instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, flags, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l, cpu.Register.sp)
+	fmt.Print(output)
+
+	if _, err := file.Write([]byte(output)); err != nil {
+        log.Fatal(err)
+    }
+
 	cpu.Register.pc += 1
 
 	//probably will move this logic
@@ -120,6 +144,9 @@ func (cpu *CPU) Step() error {
 	}
 	cpu.CurrentConditionResult = conditionResult
 
+	cpu.Debug.DebugUpdate(cpu.Bus)
+	cpu.Debug.DebugPrint()
+
 	//Instruction type
 	switch instruction.InstructionType {
 		case Nop:
@@ -128,10 +155,6 @@ func (cpu *CPU) Step() error {
 			cpu.Jp()
 		case Jr:
 			cpu.Jr()
-		case Di:
-			cpu.Di()
-		case Ei:
-			cpu.Ei()
 		case Ld8:
 			cpu.Ld8()
 		case Ld16:
@@ -150,24 +173,10 @@ func (cpu *CPU) Step() error {
 			cpu.Reti()
 		case Rst:
 			cpu.Rst()
-		case Inc:
-			cpu.Inc()
-		case Dec:
-			cpu.Dec()
-		case Add:
-			cpu.Add()
-		case AddHl:
-			cpu.AddHl()
-		case Add16_8:
-			cpu.Add16_8()
-		case Adc:
-			cpu.Adc()
-		case Sub:
-			cpu.Sub()
-		case Sbc:
-			cpu.Sbc()	
-		case Xor:
-			cpu.Xor()
+		case Di:
+			cpu.Di()
+		case Ei:
+			cpu.Ei()
 		case Daa:
 			cpu.Daa()
 		case Rlca:
@@ -184,6 +193,30 @@ func (cpu *CPU) Step() error {
 			cpu.Cpl()
 		case Scf:
 			cpu.Scf()
+		case Inc:
+			cpu.Inc()
+		case Dec:
+			cpu.Dec()
+		case Add:
+			cpu.Add()
+		case AddHl:
+			cpu.AddHl()
+		case Add16_8:
+			cpu.Add16_8()
+		case Adc:
+			cpu.Adc()
+		case Sub:
+			cpu.Sub()
+		case Sbc:
+			cpu.Sbc()	
+		case Or:
+			cpu.Or()
+		case And:
+			cpu.And()
+		case Xor:
+			cpu.Xor()
+		case Cp:
+			cpu.Cp()
 		case Cb:
 			err := cpu.Cb()
 			if err != nil{

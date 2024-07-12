@@ -1,6 +1,10 @@
 package lib
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"os"
+)
 
 //TODO: Change to class emulator
 func Run() {
@@ -9,18 +13,29 @@ func Run() {
 		return
 	}
 
-	bus, err := LoadBus(cart)
+	serial := &Serial{data: 0, control: 0}
+
+	bus, err := LoadBus(cart, serial)
 	if err != nil {
 		return
 	}
 
-	cpu, err := LoadCpu(bus)
+	//logging
+	f, err := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+	defer f.Close()
+
+	debug := LoadDebug()
+
+	cpu, err := LoadCpu(bus, debug)
 	if err != nil {
 		return
 	}
 
 	for {
-		err := cpu.Step()
+		err := cpu.Step(f)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -28,3 +43,9 @@ func Run() {
 	}
 
 }
+
+//Implementar logging de debug
+//Correr emulador de video y comparar
+//Implementar reloj
+//Debugear instrucciones
+//Db doctor?

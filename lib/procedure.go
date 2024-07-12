@@ -24,7 +24,7 @@ func (c *CPU) Jp() {
 
 func (c *CPU) Jr() {
 	if c.CurrentConditionResult {
-		c.Register.pc = c.Register.pc + c.Source.Value
+		c.Register.pc = uint16(int16(c.Register.pc) + int16(int8(c.Source.Value))) 
 	}
 }
 
@@ -59,7 +59,7 @@ func (c *CPU) Ldh() {
 	var input uint8
 
 	if c.Source.IsAddr {
-		input = c.BusRead(0xFF00 | uint16(c.BusRead(c.Source.Value)))
+		input = c.BusRead(0xFF00 | uint16(c.Source.Value))
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -252,13 +252,14 @@ func (c *CPU) Scf() {
 	c.SetFlag(flagC, true)
 }
 
+//add uin16 or uint8
 func (c *CPU) Inc() {
 	input := c.Source.Value
-	newVal := input + 1
-	c.SetRegister(c.SourceTarget, newVal)
+	result := input + 1
+	c.SetRegister(c.SourceTarget, result)
 
-	if ((c.currentOpcode & 0x03) == 0){
-		c.SetFlag(flagZ, newVal == 0)
+	if (c.currentOpcode & 0x03) != 0x03{
+		c.SetFlag(flagZ, 0xFF & result == 0)
 		c.SetFlag(flagN, false)
 		c.SetFlag(flagH, (input & 0x0F) + 0x01 == 0x10 )
 	}
@@ -266,11 +267,11 @@ func (c *CPU) Inc() {
 
 func (c *CPU) Dec() {
 	input := c.Source.Value
-	newVal := input - 1
-	c.SetRegister(c.SourceTarget, newVal)
+	result := input - 1
+	c.SetRegister(c.SourceTarget, result)
 
-	if ((c.currentOpcode & 0x0B) == 0){
-		c.SetFlag(flagZ, newVal == 0)
+	if (c.currentOpcode & 0x0B) != 0x0B{
+		c.SetFlag(flagZ, 0xFF & result == 0)
 		c.SetFlag(flagN, true)
 		c.SetFlag(flagH, ^(input & 0x0F) == 0x0F ) //4 trailing zeroes
 	}
@@ -389,6 +390,7 @@ func (c *CPU) Cp() {
 	c.SetFlag(flagN, true)
 	c.SetFlag(flagH, ^(input & 0x0F) == 0x0F)
 	c.SetFlag(flagC, input > c.Register.a)
+
 }
 
 func (c *CPU) Rlc(input uint16, t target) {

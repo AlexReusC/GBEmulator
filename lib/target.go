@@ -108,11 +108,11 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 		return Data{c.GetTargetHL(), true}, nil
 	case HLP_M:
 		val := c.GetTargetHL()
-		c.SetRegister(HL, val+1)
+		c.SetRegister(HL, c.GetTargetHL()+1)
 		return Data{val, true}, nil
 	case HLM_M:
 		val := c.GetTargetHL()
-		c.SetRegister(HL, val-1)
+		c.SetRegister(HL, c.GetTargetHL()-1)
 		return Data{val, true}, nil
 	case n_M:
 		n := uint16(c.BusRead(c.Register.pc))

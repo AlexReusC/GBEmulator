@@ -6,24 +6,24 @@ type Bus struct {
 	cart *Cart
 	wram [0x2000]uint8
 	hram [0x80]uint8
+	serial *Serial
 	ieRegister uint8
 }
 
-func LoadBus(rb *Cart) (*Bus, error) {
-	b := &Bus{cart: rb}
+func LoadBus(rb *Cart, s *Serial) (*Bus, error) {
+	b := &Bus{cart: rb, serial: s}
 
 	return b, nil
 }
 
 func (b *Bus) BusRead(a uint16) uint8 {
 	// ROM data
-	if a < 0x0800 {
+	if a < 0x8000 {
 		return b.cart.CartRead(a)
 	}
 	// Video RAM 
 	if a < 0xA000 {
-		fmt.Println("Bus read not implemented", a)
-		panic(0)
+		fmt.Printf("Bus read not implemented %x\n", a)
 		return 0x0000
 	}
 	// Cartridge/external RAM
@@ -40,8 +40,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// Object attribute memory 
 	if a < 0xFEA0 {
-		fmt.Println("Bus read not implemented", a)
-		panic(0)
+		fmt.Printf("Bus read not implemented %x\n", a)
 		return 0 //TODO
 	}
 	// Reserved (prohibited)
@@ -50,9 +49,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	}
 	// IO registers
 	if a < 0xFF80 {
-		fmt.Println("Bus read not implemented", a)
-		panic(0)
-		return 0 //TODO
+		return b.serial.SerialRead(a)
 	}
 	// High RAM
 	if a < 0xFFFF {
@@ -66,12 +63,11 @@ func (b *Bus) BusRead(a uint16) uint8 {
 }
 
 func (b *Bus) BusWrite(a uint16, v uint8) {
-	if a < 0x0800 {
+	if a < 0x8000 {
 		b.cart.CartWrite(a, v)
 	}	// Video RAM 
 	if a < 0xA000 {
 		fmt.Printf("Bus write not implemented %x\n", a)
-		panic(0)
 		return 
 	}
 	// Cartridge/external RAM
@@ -91,7 +87,6 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	// Object attribute memory 
 	if a < 0xFEA0 {
 		fmt.Printf("Bus write not implemented %x\n", a)
-		panic(0)
 		return //TODO
 	}
 	// Reserved (prohibited)
@@ -100,9 +95,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// IO registers
 	if a < 0xFF80 {
-		fmt.Printf("Bus write not implemented %x\n", a)
-		//panic(0)
-		return //TODO
+		b.serial.SerialWrite(a, v)
+		return
 	}
 	// High RAM
 	if a < 0xFFFF {
