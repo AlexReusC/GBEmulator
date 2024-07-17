@@ -141,6 +141,7 @@ var instructions = map[uint8]Instruction{
 	0x1C: {Inc, None, E, cond_None},
 	0x1D: {Dec, None, E, cond_None},
 	0x1E: {Ld8, E, n, cond_None},
+	0x1F: {Rra, None, None, cond_None},
 	// 0x2X
 	0x20: {Jr, None, n, cond_NZ},
 	0x21: {Ld16, HL, nn, cond_None},
@@ -301,7 +302,7 @@ var instructions = map[uint8]Instruction{
 	0xB3: {Or, None, E, cond_None},
 	0xB4: {Or, None, H, cond_None},
 	0xB5: {Or, None, L, cond_None},
-	0xB6: {Or, None, HL, cond_None},
+	0xB6: {Or, None, HL_M, cond_None},
 	0xB7: {Or, None, A, cond_None},
 	0xB8: {Cp, None, B, cond_None},
 	0xB9: {Cp, None, C, cond_None},
@@ -309,7 +310,7 @@ var instructions = map[uint8]Instruction{
 	0xBB: {Cp, None, E, cond_None},
 	0xBC: {Cp, None, H, cond_None},
 	0xBD: {Cp, None, L, cond_None},
-	0xBE: {Cp, None, HL, cond_None},
+	0xBE: {Cp, None, HL_M, cond_None},
 	0xBF: {Cp, None, A, cond_None},
 
 	//0xCX
@@ -324,7 +325,7 @@ var instructions = map[uint8]Instruction{
 	0xC8: {Ret, None, None, cond_Z},
 	0xC9: {Ret, None, None, cond_None},
 	0xCA: {Jp, None, nn, cond_Z},
-	0xCb: {Cb, None, nn, cond_None},
+	0xCB: {Cb, None, n, cond_None},
 	0xCC: {Call, None, nn, cond_Z},
 	0xCD: {Call, None, nn, cond_None},
 	0xCE: {Adc, None, n, cond_None},

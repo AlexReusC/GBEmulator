@@ -21,7 +21,7 @@ func Run() {
 	}
 
 	//logging
-	f, err := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.Create("../gameboy-doctor/debug.txt")
     if err != nil {
         log.Fatal(err)
     }
@@ -43,9 +43,3 @@ func Run() {
 	}
 
 }
-
-//Implementar logging de debug
-//Correr emulador de video y comparar
-//Implementar reloj
-//Debugear instrucciones
-//Db doctor?

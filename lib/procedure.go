@@ -85,6 +85,9 @@ func (c *CPU) Pop() {
 	c.Register.sp += 2
 	result := (hi<<8)|lo
 
+	if c.DestinationTarget == AF { //clear lower nibble of F (always have to be zero)
+		result = result & 0xFFF0
+	}
 	c.SetRegister(c.DestinationTarget, result)
 }
 
@@ -147,26 +150,28 @@ func (c *CPU) Ei() {
 //Decimal Adjust Accumulator
 //https://blog.ollien.com/posts/gb-daa/
 func (c *CPU) Daa() {
-	modifiedVal := c.Register.a
-	if (c.GetFlag(flagN)){ //after substraction
-		if (c.GetFlag(flagC) || modifiedVal > 0x99){
-			modifiedVal += 0x60
-			c.SetFlag(flagC, true)
-		}
-		if (c.GetFlag(flagH) || (modifiedVal & 0x0F) > 0x09){
-			modifiedVal += 0x06
-		}
-	} else { //after addition
-		if (c.GetFlag(flagC)){
-			modifiedVal -= 0x60
-		}
-		if (c.GetFlag(flagH)){
-			modifiedVal -= 0x6
-		}
+	result := c.Register.a
+	var offset uint8 = 0
+	
+	if c.GetFlag(flagH) || (!c.GetFlag(flagN) && (result & 0x0F) > 0x09){
+		offset |= 0x06
 	}
-	c.SetRegister(A, uint16(modifiedVal))
 
-	c.SetFlag(flagZ, modifiedVal == 0)
+	if c.GetFlag(flagC) || (!c.GetFlag(flagN) && result > 0x99){
+		offset |= 0x60
+		c.SetFlag(flagC, true)
+	} else {
+		c.SetFlag(flagC, false)
+	}
+
+	if c.GetFlag(flagN) {
+		result -= offset
+	} else {
+		result += offset
+	}
+
+	c.SetRegister(A, uint16(result))
+	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagH, false)
 }
 
@@ -273,29 +278,31 @@ func (c *CPU) Dec() {
 	if (c.currentOpcode & 0x0B) != 0x0B{
 		c.SetFlag(flagZ, 0xFF & result == 0)
 		c.SetFlag(flagN, true)
-		c.SetFlag(flagH, ^(input & 0x0F) == 0x0F ) //4 trailing zeroes
+		c.SetFlag(flagH, (input & 0x0F) == 0x00 ) //4 trailing zeroes
 	}
 }
 
 func (c *CPU) Add() {
+	a := c.Register.a
 	input := uint8(c.Source.Value)
-	result := c.Register.a + input
+	result := a + input
 	c.SetRegister(A, uint16(result))
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (c.Register.a & 0x0F) + (input & 0x0F) > 0x0F)
-	c.SetFlag(flagC, input > 0xFF - c.Register.a)
+	c.SetFlag(flagH, (a & 0x0F) + (input & 0x0F) > 0x0F)
+	c.SetFlag(flagC, input > 0xFF - a)
 }
 
 func (c *CPU) AddHl() {
+	hl := c.GetTargetHL()
 	input := c.Source.Value	
 	result := c.GetTargetHL() + input
 	c.SetRegister(HL, result)
 
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (c.GetTargetHL() & 0x0FFF) + (input & 0x0FFF) > 0x0FFF)
-	c.SetFlag(flagC, input > 0xFFFF - c.GetTargetHL())
+	c.SetFlag(flagH, (hl & 0x0FFF) + (input & 0x0FFF) > 0x0FFF)
+	c.SetFlag(flagC, input > 0xFFFF - hl)
 }
 
 func (c *CPU) Add16_8() {
@@ -311,44 +318,52 @@ func (c *CPU) Add16_8() {
 }
 
 func (c *CPU) Adc() {
+	a := c.Register.a
 	input := uint8(c.Source.Value)
 	carryBit := BoolToUint(c.GetFlag(flagC))
 
-	result := uint16(c.Register.a + input + carryBit)
+	result := uint16(a + input + carryBit)
 	c.SetRegister(A, result)
 
-	c.SetFlag(flagZ, false)
+	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (c.Register.a & 0x0F) + (input & 0x0F) > 0x0F)
-	c.SetFlag(flagC, input > 0xFF - c.Register.a)
+	c.SetFlag(flagH, (a & 0x0F) + (input & 0x0F) > 0x0F)
+	c.SetFlag(flagC, input > 0xFF - a)
 }
 
 func (c *CPU) Sub() {
-	input := c.Source.Value
-	result := uint16(c.Register.a - uint8(input))
+	a := c.Register.a
+	input := uint8(c.Source.Value)
+	result := uint16(c.Register.a - input)
 	c.SetRegister(A, result)
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, ^(input & 0x0F) == 0x0F)
-	c.SetFlag(flagC, input > uint16(c.Register.a))
+	c.SetFlag(flagH, (a & 0x0F) < (input & 0x0F))
+	c.SetFlag(flagC, input > a)
 }
 
 func (c *CPU) Sbc() {
+	a := c.Register.a
 	input := uint8(c.Source.Value)
 	carryBit := BoolToUint(c.GetFlag(flagC))
 
-	result := uint16(c.Register.a - input - carryBit)
+	result := uint16(a - input - carryBit)
 	c.SetRegister(A, result)
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, ^(input & 0x0F) == 0x0F)
-	c.SetFlag(flagC, input + carryBit > c.Register.a)
+	c.SetFlag(flagH, (a & 0x0F) < ((input & 0x0F) + carryBit))
+	c.SetFlag(flagC, input + carryBit > a)
 }
 
 func (c *CPU) And() {
-	input := uint8(c.Source.Value)
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	result := uint16(c.Register.a & input) 
 	c.SetRegister(A, result)
 
@@ -360,8 +375,13 @@ func (c *CPU) And() {
 
 
 func (c *CPU) Xor() {
-	input := uint8(c.Source.Value)
-	result := uint16(c.Register.a & input) 
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
+	result := uint16(c.Register.a ^ input) 
 	c.SetRegister(A, result)
 
 	c.SetFlag(flagZ, result == 0)
@@ -371,7 +391,12 @@ func (c *CPU) Xor() {
 }
 
 func (c *CPU) Or() {
-	input := uint8(c.Source.Value)
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	result := uint16(c.Register.a | input) 
 	c.SetRegister(A, result)
 
@@ -383,12 +408,13 @@ func (c *CPU) Or() {
 
 
 func (c *CPU) Cp() {
+	a := c.Register.a
 	input := uint8(c.Source.Value)
-	result := uint16(c.Register.a - input) 
+	result := uint16(a - input) 
 	
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, ^(input & 0x0F) == 0x0F)
+	c.SetFlag(flagH, (a & 0x0F) < (input & 0x0F))
 	c.SetFlag(flagC, input > c.Register.a)
 
 }
@@ -482,9 +508,10 @@ func (c *CPU) Swap(input uint16, t target) {
 	c.SetFlag(flagC, false)
 }
 
+// Shift Right Logically
 func (c *CPU) Srl(input uint16, t target) {
 	lsbOn := input & 0x01
-	result := input >> 0x01
+	result := input >> 1
 	c.SetRegister(t, result)
 
 	c.SetFlag(flagZ, result == 0)

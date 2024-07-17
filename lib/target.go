@@ -150,7 +150,7 @@ func (c *CPU) SetRegister(t target, v uint16) {
 		c.Register.l = uint8(v)
 	case AF:
 		c.Register.a = uint8((v & 0xFF00) >> 8)
-		c.Register.f = uint8(v & 0xFF)
+		c.Register.f = uint8(v & 0x00FF)
 	case BC:
 		c.Register.b = uint8((v & 0xFF00) >> 8)
 		c.Register.c = uint8(v & 0xFF)
