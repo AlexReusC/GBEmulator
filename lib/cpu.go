@@ -3,7 +3,6 @@ package lib
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -40,9 +39,9 @@ type CPU struct {
 	Debug *Debug
 
 	Source Data
-	Destination Data
 	SourceTarget target
 	DestinationTarget target
+	ImmediateData uint16
 	CurrentConditionResult bool
 	currentOpcode uint8
 
@@ -94,44 +93,37 @@ func (c *CPU) BusWrite16(a uint16, v uint16) {
 	c.Bus.BusWrite16(a, v)
 }
 
+func (c *CPU) GetImmediateData(destination target, source target) {
+	c.Register.pc += 1
+	if destination == n || destination == n_M || source == n || source == n_M {
+		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
+		c.Register.pc += 1
+	}
+	if destination == nn || destination == nn_M || source == nn || source == nn_M {
+		c.ImmediateData = c.BusRead16(c.Register.pc)
+		c.Register.pc += 2
+	} 
+}
+
 func (c *CPU) GetFlag(flag flagRegister) bool {
 	return c.Register.f & (0x1 << flag) != 0
 }
 
-func (cpu *CPU) Step(file *os.File) error {
+func (cpu *CPU) Step(f *os.File) error {
 	cpu.currentOpcode = cpu.BusRead(cpu.Register.pc)
-	pcData := fmt.Sprintf("Pc: %x, (%02x %02x %02x) -> ", cpu.Register.pc, cpu.currentOpcode, cpu.BusRead(cpu.Register.pc+1), cpu.BusRead(cpu.Register.pc+2))
 	instruction, ok := instructions[cpu.currentOpcode]
 	if !ok {
-		fmt.Printf("%s \n", pcData)
-		return errors.New("opcode not implemented")
+		return fmt.Errorf("opcode %x not implemented", cpu.currentOpcode)
 	}
+	Log(cpu, f)
 
-	doctor := fmt.Sprintf("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%02X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n", cpu.Register.a, cpu.Register.f, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l, cpu.Register.sp, cpu.Register.pc, cpu.BusRead(cpu.Register.pc), cpu.BusRead(cpu.Register.pc+1), cpu.BusRead(cpu.Register.pc+2), cpu.BusRead(cpu.Register.pc+3))
-	
-	//flags := fmt.Sprintf("%c%c%c%c", cpu.FormatFlag(flagZ, 'Z'), cpu.FormatFlag(flagN, 'N'), cpu.FormatFlag(flagH, 'H'), cpu.FormatFlag(flagC, 'C'))
-	//output := fmt.Sprintf("%s Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x SP: %x \n", pcData, instruction.InstructionType, instruction.Destination, instruction.Source, cpu.Register.a, flags, cpu.Register.b, cpu.Register.c, cpu.Register.d, cpu.Register.e, cpu.Register.h, cpu.Register.l, cpu.Register.sp)
-	fmt.Print(doctor)
+	cpu.GetImmediateData(instruction.Destination, instruction.Source)
 
-	if _, err := file.Write([]byte(doctor)); err != nil {
-        log.Fatal(err)
-    }
-
-	cpu.Register.pc += 1
-
-	//probably will move this logic
-
-	//Get destination, including inmediate
-	data, err := cpu.GetTarget(instruction.Destination)
-	if err != nil{
-		return err
-	}
-	cpu.Destination = data
+	//Get destination
 	cpu.DestinationTarget = instruction.Destination
 	
-
-	//Get source, including inmediate
-	data, err = cpu.GetTarget(instruction.Source)
+	//Get source
+	data, err := cpu.GetTarget(instruction.Source)
 	if err != nil{
 		return err
 	}
@@ -146,6 +138,7 @@ func (cpu *CPU) Step(file *os.File) error {
 	}
 	cpu.CurrentConditionResult = conditionResult
 
+	//Serial print
 	cpu.Debug.DebugUpdate(cpu.Bus)
 	cpu.Debug.DebugPrint()
 

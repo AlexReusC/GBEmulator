@@ -62,6 +62,8 @@ func (c *CPU) GetTargetHL() uint16 {
 }
 
 //TODO: move pc logic
+/*Function for getting the target value dynamically
+*/
 func (c *CPU) GetTarget(t target) (Data, error) {
 	switch t {
 	case A:
@@ -91,13 +93,9 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 	case SP:
 		return Data{c.Register.sp, false}, nil
 	case n:
-		n := uint16(c.BusRead(c.Register.pc))
-		c.Register.pc += 1
-		return Data{n, false}, nil
+		return Data{c.ImmediateData, false}, nil
 	case nn:
-		nn := c.BusRead16(c.Register.pc)
-		c.Register.pc += 2
-		return Data{nn, false}, nil
+		return Data{c.ImmediateData, false}, nil
 	case C_M:
 		return Data{uint16(c.Register.c), true}, nil
 	case BC_M:
@@ -108,20 +106,16 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 		return Data{c.GetTargetHL(), true}, nil
 	case HLP_M:
 		val := c.GetTargetHL()
-		c.SetRegister(HL, c.GetTargetHL()+1)
+		c.SetTarget(HL, val+1)
 		return Data{val, true}, nil
 	case HLM_M:
 		val := c.GetTargetHL()
-		c.SetRegister(HL, c.GetTargetHL()-1)
+		c.SetTarget(HL, val-1)
 		return Data{val, true}, nil
 	case n_M:
-		n := uint16(c.BusRead(c.Register.pc))
-		c.Register.pc += 1
-		return Data{n, true}, nil
+		return Data{c.ImmediateData, true}, nil
 	case nn_M:
-		nn := c.BusRead16(c.Register.pc)
-		c.Register.pc += 2
-		return Data{nn, true}, nil
+		return Data{c.ImmediateData, true}, nil
 	case None:
 		return Data{0, false}, nil
 	// TODO: Other targets
@@ -130,7 +124,7 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 	}
 }
 
-func (c *CPU) SetRegister(t target, v uint16) {
+func (c *CPU) SetTarget(t target, v uint16) {
 	switch t {
 	case A:
 		c.Register.a = uint8(v)
@@ -160,12 +154,23 @@ func (c *CPU) SetRegister(t target, v uint16) {
 	case HL:
 		c.Register.h = uint8((v & 0xFF00) >> 8)
 		c.Register.l = uint8(v & 0xFF)
+	case DE_M:
+		c.BusWrite(c.GetTargetDE(), uint8(v))
 	case HL_M:
 		c.BusWrite(c.GetTargetHL(), uint8(v))
+	case HLP_M:
+		c.BusWrite(c.GetTargetHL(), uint8(v))
+		c.SetTarget(HL, c.GetTargetHL()+1)
+	case HLM_M:
+		c.BusWrite(c.GetTargetHL(), uint8(v))
+		c.SetTarget(HL, c.GetTargetHL()-1)
 	case SP:
 		c.Register.sp = v
+	case nn_M:
+		c.BusWrite(c.ImmediateData, uint8(v))
+
 	default:
-		fmt.Printf("Unknown register %x for setting\n", t)
+		fmt.Printf("Unknown register %s for setting\n", t)
 		panic(0)
 	}
 }
