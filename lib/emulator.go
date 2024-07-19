@@ -10,6 +10,7 @@ import (
 func Run() {
 	cart, err := LoadCart()
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
