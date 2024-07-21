@@ -117,7 +117,7 @@ func (c *CPU) Reti() {
 	//Jp
 	c.Register.pc = (hi << 8) | lo
 
-	c.InterruptorMasterEnabled = true
+	c.MasterInterruptEnabled = true
 }
 
 func (c *CPU) Rst() {
@@ -130,7 +130,7 @@ func (c *CPU) Rst() {
 }
 
 func (c *CPU) Di() {
-	c.InterruptorMasterEnabled = false
+	c.MasterInterruptEnabled = false
 }
 
 func (c *CPU) Ei() {

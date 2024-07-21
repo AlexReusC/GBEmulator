@@ -61,7 +61,6 @@ func (c *CPU) GetTargetHL() uint16 {
 	return (hi<<8 | lo)
 }
 
-//TODO: move pc logic
 /*Function for getting the target value dynamically
 */
 func (c *CPU) GetTarget(t target) (Data, error) {

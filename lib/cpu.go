@@ -38,6 +38,8 @@ type CPU struct {
 	Bus *Bus
 	Debug *Debug
 
+	Halted bool
+
 	Source Data
 	SourceTarget target
 	DestinationTarget target
@@ -45,7 +47,9 @@ type CPU struct {
 	CurrentConditionResult bool
 	currentOpcode uint8
 
-	InterruptorMasterEnabled bool
+	MasterInterruptEnabled bool
+	EnableMasterInterruptAfter int
+	Interrupts uint8
 }
 
 func LoadCpu(b *Bus, d *Debug) (*CPU, error) {
@@ -69,13 +73,6 @@ func LoadCpu(b *Bus, d *Debug) (*CPU, error) {
 	return c, nil
 }
 
-func (c *CPU) GetIeRegister() uint8 {
-	return c.Bus.ieRegister
-}
-
-func (c *CPU) SetIeRegister(n uint8) {
-	c.Bus.ieRegister = n
-}
 
 func (c *CPU) BusRead(a uint16) uint8 {
 	return c.Bus.BusRead(a)
@@ -93,132 +90,169 @@ func (c *CPU) BusWrite16(a uint16, v uint16) {
 	c.Bus.BusWrite16(a, v)
 }
 
-func (c *CPU) GetImmediateData(destination target, source target) {
-	c.Register.pc += 1
-	if destination == n || destination == n_M || source == n || source == n_M {
-		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
-		c.Register.pc += 1
-	}
-	if destination == nn || destination == nn_M || source == nn || source == nn_M {
-		c.ImmediateData = c.BusRead16(c.Register.pc)
-		c.Register.pc += 2
-	} 
-}
-
 func (c *CPU) GetFlag(flag flagRegister) bool {
 	return c.Register.f & (0x1 << flag) != 0
 }
 
-func (cpu *CPU) Step(f *os.File) error {
-	cpu.currentOpcode = cpu.BusRead(cpu.Register.pc)
-	instruction, ok := instructions[cpu.currentOpcode]
-	if !ok {
-		return fmt.Errorf("opcode %x not implemented", cpu.currentOpcode)
+func (c *CPU) Step(f *os.File) error {
+	if !c.Halted {
+		instruction, err := c.FetchInstruction(f)
+		if err != nil{
+			return err
+		}
+
+		err = c.DecodeInstruction(instruction)
+		if err != nil{
+			return err
+		}
+
+		//Serial print
+		c.Debug.DebugUpdate(c.Bus)
+		c.Debug.DebugPrint()
+
+		err = c.ExecuteInstruction(instruction)
+		if err != nil{
+			return err
+		}
+
+	}else{
+		//cycle()
+		if c.Interrupts != 0 {
+			c.Halted = true
+		}
 	}
-	Log(cpu, f)
 
-	cpu.GetImmediateData(instruction.Destination, instruction.Source)
-
-	//Get destination
-	cpu.DestinationTarget = instruction.Destination
-	
-	//Get source
-	data, err := cpu.GetTarget(instruction.Source)
-	if err != nil{
-		return err
+	//Manage EI instruction
+	if c.EnableMasterInterruptAfter > 0 {
+		c.EnableMasterInterruptAfter -= 1
+		if c.EnableMasterInterruptAfter == 0 {
+			c.MasterInterruptEnabled = true
+		}
 	}
-	cpu.Source = data
-	cpu.SourceTarget = instruction.Source
-
-	//Conditional mode
-	currentCondition := instruction.ConditionType
-	conditionResult, err := cpu.checkCond(currentCondition)
-	if err != nil{
-		return err
-	}
-	cpu.CurrentConditionResult = conditionResult
-
-	//Serial print
-	cpu.Debug.DebugUpdate(cpu.Bus)
-	cpu.Debug.DebugPrint()
-
-	//Instruction type
-	switch instruction.InstructionType {
-		case Nop:
-			cpu.Nop()
-		case Jp:
-			cpu.Jp()
-		case Jr:
-			cpu.Jr()
-		case Ld8:
-			cpu.Ld8()
-		case Ld16:
-			cpu.Ld16()
-		case Ldh:
-			cpu.Ldh()
-		case Push:
-			cpu.Push()
-		case Pop:
-			cpu.Pop()
-		case Call:
-			cpu.Call()
-		case Ret:
-			cpu.Ret()
-		case Reti:
-			cpu.Reti()
-		case Rst:
-			cpu.Rst()
-		case Di:
-			cpu.Di()
-		case Ei:
-			cpu.Ei()
-		case Daa:
-			cpu.Daa()
-		case Rlca:
-			cpu.Rlca()
-		case Rla:
-			cpu.Rla()
-		case Rrca:
-			cpu.Rrca()
-		case Rra:
-			cpu.Rra()
-		case Ccf:
-			cpu.Ccf()
-		case Cpl:
-			cpu.Cpl()
-		case Scf:
-			cpu.Scf()
-		case Inc:
-			cpu.Inc()
-		case Dec:
-			cpu.Dec()
-		case Add:
-			cpu.Add()
-		case AddHl:
-			cpu.AddHl()
-		case Add16_8:
-			cpu.Add16_8()
-		case Adc:
-			cpu.Adc()
-		case Sub:
-			cpu.Sub()
-		case Sbc:
-			cpu.Sbc()	
-		case Or:
-			cpu.Or()
-		case And:
-			cpu.And()
-		case Xor:
-			cpu.Xor()
-		case Cp:
-			cpu.Cp()
-		case Cb:
-			err := cpu.Cb()
-			if err != nil{
-				return err
-			}
-		default:
-			return errors.New("invalid instruction")
-	}
+	c.HandleInterrupts()
 	return nil
+}
+
+func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
+	c.currentOpcode = c.BusRead(c.Register.pc)
+	instruction, ok := instructions[c.currentOpcode]
+	if !ok {
+		return instruction, fmt.Errorf("opcode %x not implemented", c.currentOpcode)
+	}
+	Log(c, f)
+	c.Register.pc += 1
+	if instruction.Destination == n || instruction.Destination == n_M || instruction.Source == n || instruction.Source == n_M {
+		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
+		c.Register.pc += 1
+	}
+	if instruction.Destination == nn || instruction.Destination == nn_M || instruction.Source == nn || instruction.Source == nn_M {
+		c.ImmediateData = c.BusRead16(c.Register.pc)
+		c.Register.pc += 2
+	}
+	return instruction, nil
+}
+
+func (c *CPU) DecodeInstruction(instruction Instruction) error{
+		//Get destination
+		c.DestinationTarget = instruction.Destination
+		
+		//Get source
+		data, err := c.GetTarget(instruction.Source)
+		if err != nil{
+			return err
+		}
+		c.Source = data
+		c.SourceTarget = instruction.Source
+
+		//Conditional mode
+		currentCondition := instruction.ConditionType
+		conditionResult, err := c.checkCond(currentCondition)
+		if err != nil{
+			return err
+		}
+		c.CurrentConditionResult = conditionResult
+
+		return nil
+}
+
+func (c *CPU) ExecuteInstruction(i Instruction) error {
+		//Instruction type
+		switch i.InstructionType {
+			case Nop:
+				c.Nop()
+			case Jp:
+				c.Jp()
+			case Jr:
+				c.Jr()
+			case Ld8:
+				c.Ld8()
+			case Ld16:
+				c.Ld16()
+			case Ldh:
+				c.Ldh()
+			case Push:
+				c.Push()
+			case Pop:
+				c.Pop()
+			case Call:
+				c.Call()
+			case Ret:
+				c.Ret()
+			case Reti:
+				c.Reti()
+			case Rst:
+				c.Rst()
+			case Di:
+				c.Di()
+			case Ei:
+				c.Ei()
+			case Daa:
+				c.Daa()
+			case Rlca:
+				c.Rlca()
+			case Rla:
+				c.Rla()
+			case Rrca:
+				c.Rrca()
+			case Rra:
+				c.Rra()
+			case Ccf:
+				c.Ccf()
+			case Cpl:
+				c.Cpl()
+			case Scf:
+				c.Scf()
+			case Inc:
+				c.Inc()
+			case Dec:
+				c.Dec()
+			case Add:
+				c.Add()
+			case AddHl:
+				c.AddHl()
+			case Add16_8:
+				c.Add16_8()
+			case Adc:
+				c.Adc()
+			case Sub:
+				c.Sub()
+			case Sbc:
+				c.Sbc()	
+			case Or:
+				c.Or()
+			case And:
+				c.And()
+			case Xor:
+				c.Xor()
+			case Cp:
+				c.Cp()
+			case Cb:
+				err := c.Cb()
+				if err != nil{
+					return err
+				}
+			default:
+				return errors.New("invalid instruction")
+		}
+		return nil
 }

@@ -8,6 +8,7 @@ type Bus struct {
 	hram [0x80]uint8
 	serial *Serial
 	ieRegister uint8
+	interruptorFlags uint8
 }
 
 func LoadBus(rb *Cart, s *Serial) (*Bus, error) {
