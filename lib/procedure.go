@@ -36,15 +36,27 @@ func (c *CPU) Ld8() {
 	} else {
 		input = uint8(c.Source.Value)
 	}
-
+	
 	c.SetTarget(c.DestinationTarget, uint16(input))
-
-	//TODO: (HL) SP+e instruction
 }
 
 func (c *CPU) Ld16() {
 	//Ld16 has no addresses in load
 	c.SetTarget(c.DestinationTarget, c.Source.Value)
+
+}
+
+func (c *CPU) LdSPn() {
+	input8 := c.Source.Value
+	input16 := c.Register.sp
+	result := uint16(int16(int8(uint8(input8))) + int16(input16))
+
+	c.SetTarget(c.DestinationTarget, result)
+
+	c.SetFlag(flagZ, false)
+	c.SetFlag(flagN, false)
+	c.SetFlag(flagH, (input16 & 0x0F) + (input8 & 0x0F) > 0x0F)
+	c.SetFlag(flagC, (input16 & 0xFF) + (input8 & 0xFF) > 0xFF)
 }
 
 func (c *CPU) Ldh() {
@@ -304,7 +316,7 @@ func (c *CPU) AddHl() {
 func (c *CPU) Add16_8() {
 	input16 := c.Register.sp
 	input8 := c.Source.Value
-	result := input8 + input16
+	result := uint16(int16(int8(uint8(input8))) + int16(input16))
 	c.SetTarget(c.DestinationTarget, result)
 
 	c.SetFlag(flagZ, false)

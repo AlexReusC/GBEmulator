@@ -1,5 +1,7 @@
 package lib
 
+//TODO: check e8 and (nn)+16
+
 type procedure string
 type procedureCb string
 type conditional string
@@ -13,6 +15,7 @@ const (
 	Ld8     procedure = "Ld8"
 	Ld16    procedure = "Ld16"
 	Ldh     procedure = "Ldh"
+	LdSPn   procedure = "LDSp+n"
 	Push    procedure = "Push"
 	Pop     procedure = "Pop"
 	Call    procedure = "Call"
@@ -59,31 +62,33 @@ const (
 )
 
 const (
-	A     target = "A"
-	B     target = "B"
-	C     target = "C"
-	D     target = "D"
-	E     target = "E"
-	F     target = "F"
-	H     target = "H"
-	L     target = "L"
-	AF    target = "AF"
-	BC    target = "BC"
-	DE    target = "DE"
-	HL    target = "HL"
-	SP    target = "SP"
-	e8    target = "e8"
-	n     target = "n"
-	nn    target = "nn"
-	C_M   target = "(C)"
-	BC_M  target = "(BC)"
-	DE_M  target = "(DE)"
-	HL_M  target = "(HL)"
-	HLP_M target = "(HL+)"
-	HLM_M target = "(HL-)"
-	n_M   target = "(n)"
-	nn_M  target = "(nn)"
-	None  target = "none"
+	A      target = "A"
+	B      target = "B"
+	C      target = "C"
+	D      target = "D"
+	E      target = "E"
+	F      target = "F"
+	H      target = "H"
+	L      target = "L"
+	AF     target = "AF"
+	BC     target = "BC"
+	DE     target = "DE"
+	HL     target = "HL"
+	SP     target = "SP"
+	e8     target = "e8"
+	SPe8   target = "SP+e8"
+	n      target = "n"
+	nn     target = "nn"
+	C_M    target = "(C)"
+	BC_M   target = "(BC)"
+	DE_M   target = "(DE)"
+	HL_M   target = "(HL)"
+	HLP_M  target = "(HL+)"
+	HLM_M  target = "(HL-)"
+	n_M    target = "(n)"
+	nn_M   target = "(nn)"
+	nn_M16 target = "(nn)16"
+	None   target = "none"
 )
 
 const (
@@ -117,7 +122,7 @@ var instructions = map[uint8]Instruction{
 	0x05: {Dec, None, B, cond_None},
 	0x06: {Ld8, B, n, cond_None},
 	0x07: {Rlca, None, None, cond_None},
-	0x08: {Ld16, nn_M, SP, cond_None},
+	0x08: {Ld16, nn_M16, SP, cond_None},
 	0x09: {AddHl, HL, BC, cond_None},
 	0x0A: {Ld8, A, BC_M, cond_None},
 	0x0B: {Dec, None, BC, cond_None},
@@ -351,7 +356,7 @@ var instructions = map[uint8]Instruction{
 	0xE5: {Push, None, HL, cond_None},
 	0xE6: {And, None, n, cond_None},
 	0xE7: {Push, None, None, cond_None},
-	0xE8: {Add16_8, SP, e8, cond_None},
+	0xE8: {Add16_8, SP, n, cond_None},
 	0xE9: {Jp, None, HL, cond_None},
 	0xEA: {Ld8, nn_M, A, cond_None},
 	0xEE: {Xor, None, n, cond_None},
@@ -364,6 +369,8 @@ var instructions = map[uint8]Instruction{
 	0xF5: {Push, None, AF, cond_None},
 	0xF6: {Or, None, n, cond_None},
 	0xF7: {Rst, None, None, cond_None},
+	0xF8: {LdSPn, HL, n, cond_None},
+	0xF9: {Ld16, SP, HL, cond_None},
 	0xFA: {Ld8, A, nn_M, cond_None},
 	0xFB: {Ei, None, None, cond_None},
 	0xFE: {Cp, None, n, cond_None},

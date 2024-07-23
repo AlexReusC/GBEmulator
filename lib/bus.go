@@ -78,6 +78,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// Working RAM
 	if a < 0xE000 {
+
 		b.WramWrite(a, v)
 		return
 	}

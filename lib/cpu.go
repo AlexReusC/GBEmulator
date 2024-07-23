@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"errors"
 	"fmt"
 	"os"
 )
@@ -115,6 +114,7 @@ func (c *CPU) Step(f *os.File) error {
 			return err
 		}
 
+
 	}else{
 		//cycle()
 		if c.Interrupts != 0 {
@@ -141,11 +141,11 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	}
 	Log(c, f)
 	c.Register.pc += 1
-	if instruction.Destination == n || instruction.Destination == n_M || instruction.Source == n || instruction.Source == n_M {
+	if instruction.Destination == n || instruction.Destination == n_M || instruction.Source == n || instruction.Source == n_M || instruction.Source == SPe8 {
 		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
 		c.Register.pc += 1
 	}
-	if instruction.Destination == nn || instruction.Destination == nn_M || instruction.Source == nn || instruction.Source == nn_M {
+	if instruction.Destination == nn || instruction.Destination == nn_M || instruction.Destination == nn_M16 || instruction.Source == nn || instruction.Source == nn_M {
 		c.ImmediateData = c.BusRead16(c.Register.pc)
 		c.Register.pc += 2
 	}
@@ -190,6 +190,8 @@ func (c *CPU) ExecuteInstruction(i Instruction) error {
 				c.Ld16()
 			case Ldh:
 				c.Ldh()
+			case LdSPn:
+				c.LdSPn()
 			case Push:
 				c.Push()
 			case Pop:
@@ -252,7 +254,7 @@ func (c *CPU) ExecuteInstruction(i Instruction) error {
 					return err
 				}
 			default:
-				return errors.New("invalid instruction")
+				return fmt.Errorf("invalid instruction %s\n", i.InstructionType)
 		}
 		return nil
 }

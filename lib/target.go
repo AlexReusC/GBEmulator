@@ -81,6 +81,9 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 		return Data{uint16(c.Register.h), false}, nil
 	case L:
 		return Data{uint16(c.Register.l), false}, nil
+	case SPe8:
+		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.ImmediateData)))) 
+		return Data{val, false}, nil
 	case AF:
 		return Data{c.GetTargetAF(), false}, nil
 	case BC:
@@ -167,7 +170,8 @@ func (c *CPU) SetTarget(t target, v uint16) {
 		c.Register.sp = v
 	case nn_M:
 		c.BusWrite(c.ImmediateData, uint8(v))
-
+	case nn_M16:
+		c.BusWrite16(c.ImmediateData, v)
 	default:
 		fmt.Printf("Unknown register %s for setting\n", t)
 		panic(0)
