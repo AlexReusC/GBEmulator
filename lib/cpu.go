@@ -93,30 +93,30 @@ func (c *CPU) GetFlag(flag flagRegister) bool {
 	return c.Register.f & (0x1 << flag) != 0
 }
 
-func (c *CPU) Step(f *os.File) error {
+func (c *CPU) Step(f *os.File) (int, error) {
+	cycles := 0
 	if !c.Halted {
 		instruction, err := c.FetchInstruction(f)
 		if err != nil{
-			return err
+			return 0, err
 		}
 
 		err = c.DecodeInstruction(instruction)
 		if err != nil{
-			return err
+			return 0, err
 		}
 
 		//Serial print
 		c.Debug.DebugUpdate(c.Bus)
 		c.Debug.DebugPrint()
 
-		err = c.ExecuteInstruction(instruction)
+		instructionCycles, err := c.ExecuteInstruction(instruction)
 		if err != nil{
-			return err
+			return 0, err
 		}
-
-
+		cycles += instructionCycles
 	}else{
-		//cycle()
+		cycles += 1
 		if c.Interrupts != 0 {
 			c.Halted = true
 		}
@@ -129,8 +129,7 @@ func (c *CPU) Step(f *os.File) error {
 			c.MasterInterruptEnabled = true
 		}
 	}
-	c.HandleInterrupts()
-	return nil
+	return cycles, nil
 }
 
 func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
@@ -175,86 +174,88 @@ func (c *CPU) DecodeInstruction(instruction Instruction) error{
 		return nil
 }
 
-func (c *CPU) ExecuteInstruction(i Instruction) error {
+func (c *CPU) ExecuteInstruction(i Instruction) (int, error) {
+		cycles := 0
 		//Instruction type
 		switch i.InstructionType {
 			case Nop:
-				c.Nop()
+				cycles += c.Nop()
 			case Jp:
-				c.Jp()
+				cycles += c.Jp()
 			case Jr:
-				c.Jr()
+				cycles += c.Jr()
 			case Ld8:
-				c.Ld8()
+				cycles += c.Ld8()
 			case Ld16:
-				c.Ld16()
+				cycles += c.Ld16()
 			case Ldh:
-				c.Ldh()
+				cycles += c.Ldh()
 			case LdSPn:
-				c.LdSPn()
+				cycles += c.LdSPn()
 			case Push:
-				c.Push()
+				cycles += c.Push()
 			case Pop:
-				c.Pop()
+				cycles += c.Pop()
 			case Call:
-				c.Call()
+				cycles += c.Call()
 			case Ret:
-				c.Ret()
+				cycles += c.Ret()
 			case Reti:
-				c.Reti()
+				cycles += c.Reti()
 			case Rst:
-				c.Rst()
+				cycles += c.Rst()
 			case Di:
-				c.Di()
+				cycles += c.Di()
 			case Ei:
-				c.Ei()
+				cycles += c.Ei()
 			case Daa:
-				c.Daa()
+				cycles += c.Daa()
 			case Rlca:
-				c.Rlca()
+				cycles += c.Rlca()
 			case Rla:
-				c.Rla()
+				cycles += c.Rla()
 			case Rrca:
-				c.Rrca()
+				cycles += c.Rrca()
 			case Rra:
-				c.Rra()
+				cycles += c.Rra()
 			case Ccf:
-				c.Ccf()
+				cycles += c.Ccf()
 			case Cpl:
-				c.Cpl()
+				cycles += c.Cpl()
 			case Scf:
-				c.Scf()
+				cycles += c.Scf()
 			case Inc:
-				c.Inc()
+				cycles += c.Inc()
 			case Dec:
-				c.Dec()
+				cycles += c.Dec()
 			case Add:
-				c.Add()
+				cycles += c.Add()
 			case AddHl:
-				c.AddHl()
+				cycles += c.AddHl()
 			case Add16_8:
-				c.Add16_8()
+				cycles += c.Add16_8()
 			case Adc:
-				c.Adc()
+				cycles += c.Adc()
 			case Sub:
-				c.Sub()
+				cycles += c.Sub()
 			case Sbc:
-				c.Sbc()	
+				cycles += c.Sbc()	
 			case Or:
-				c.Or()
+				cycles += c.Or()
 			case And:
-				c.And()
+				cycles += c.And()
 			case Xor:
-				c.Xor()
+				cycles += c.Xor()
 			case Cp:
-				c.Cp()
+				cycles += c.Cp()
 			case Cb:
-				err := c.Cb()
+				instructionCycles, err := c.Cb()
 				if err != nil{
-					return err
+					return 0, err
 				}
+				cycles += instructionCycles
 			default:
-				return fmt.Errorf("invalid instruction %s\n", i.InstructionType)
+				return 0, fmt.Errorf("invalid instruction %s", i.InstructionType)
 		}
-		return nil
+		return cycles, nil
 }

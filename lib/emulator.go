@@ -15,7 +15,6 @@ func Run() {
 	}
 
 	serial := &Serial{data: 0, control: 0}
-
 	bus, err := LoadBus(cart, serial)
 	if err != nil {
 		return
@@ -35,12 +34,19 @@ func Run() {
 		return
 	}
 
+	clock, err := LoadClock(cpu)
+	if err != nil {
+		return
+	}
+
 	for {
-		err := cpu.Step(f)
+		cycles, err := cpu.Step(f)
 		if err != nil {
-			fmt.Println(err)
 			return
 		}
+		clock.Update(cycles)
+		//TODO: GPU
+		cpu.HandleInterrupts()
 	}
 
 }

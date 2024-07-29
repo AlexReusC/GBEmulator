@@ -1,7 +1,5 @@
 package lib
 
-//TODO: check e8 and (nn)+16
-
 type procedure string
 type procedureCb string
 type conditional string
