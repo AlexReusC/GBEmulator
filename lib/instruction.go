@@ -43,6 +43,7 @@ const (
 	Scf     procedure = "Scf"
 	Ccf     procedure = "Ccf"
 	Ei      procedure = "Ei"
+	Halt    procedure = "Halt"
 )
 
 const (
@@ -236,7 +237,7 @@ var instructions = map[uint8]Instruction{
 	0x73: {Ld8, HL_M, E, cond_None},
 	0x74: {Ld8, HL_M, H, cond_None},
 	0x75: {Ld8, HL_M, L, cond_None},
-	//HALT instruction
+	0x76: {Halt, None, None, cond_None},
 	0x77: {Ld8, HL_M, A, cond_None},
 	0x78: {Ld8, A, B, cond_None},
 	0x79: {Ld8, A, C, cond_None},
@@ -345,7 +346,7 @@ var instructions = map[uint8]Instruction{
 	0xD9: {Reti, None, None, cond_None},
 	0xDA: {Jp, None, nn, cond_C},
 	0xDC: {Jp, None, nn, cond_C},
-	0xDE: {Sbc, None, n, cond_C},
+	0xDE: {Sbc, None, n, cond_None},
 	0xDF: {Rst, None, None, cond_None},
 	//0xEX
 	0xE0: {Ldh, n_M, A, cond_None},

@@ -117,8 +117,8 @@ func (c *CPU) Step(f *os.File) (int, error) {
 		cycles += instructionCycles
 	}else{
 		cycles += 1
-		if c.Interrupts != 0 {
-			c.Halted = true
+		if c.Bus.interruptorFlags != 0 {
+			c.Halted = false
 		}
 	}
 
@@ -208,6 +208,8 @@ func (c *CPU) ExecuteInstruction(i Instruction) (int, error) {
 				cycles += c.Di()
 			case Ei:
 				cycles += c.Ei()
+			case Halt:
+				cycles += c.Halt()
 			case Daa:
 				cycles += c.Daa()
 			case Rlca:

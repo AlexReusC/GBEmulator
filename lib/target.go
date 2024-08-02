@@ -156,6 +156,8 @@ func (c *CPU) SetTarget(t target, v uint16) {
 	case HL:
 		c.Register.h = uint8((v & 0xFF00) >> 8)
 		c.Register.l = uint8(v & 0xFF)
+	case BC_M:
+		c.BusWrite(c.GetTargetBC(), uint8(v))
 	case DE_M:
 		c.BusWrite(c.GetTargetDE(), uint8(v))
 	case HL_M:

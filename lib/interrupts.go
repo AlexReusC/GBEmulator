@@ -1,9 +1,11 @@
 package lib
 
+import "fmt"
+
 type InterruptorBit int
 
 const (
-	VBLANK InterruptorBit = iota + 1
+	VBLANK InterruptorBit = iota
 	LCDSATUS
 	TIMER
 	SERIAL
@@ -25,6 +27,7 @@ func (c *CPU) ProcessInterrupt(b InterruptorBit, address uint16) {
 	c.Register.sp -= 1
 	c.BusWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
 
+	fmt.Printf("Process %x \n", c.Register.pc)
 	c.Register.pc = address
 }
 
@@ -33,6 +36,8 @@ func (c *CPU) HandleInterrupts() {
 		return
 	}
 
+	//fmt.Println(c.Bus.ieRegister, c.Bus.interruptorFlags)
+	//panic(0)
 	interruptors := []Interruptor{
 		{VBLANK, 0x40},
 		{LCDSATUS, 0x48},

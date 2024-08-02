@@ -66,7 +66,7 @@ func (c *CPU) Ld8() int {
 	if IsPointer(c.SourceTarget) || IsPointer(c.DestinationTarget){
 		cycles += 1
 	}
-		if c.DestinationTarget == nn_M {
+	if c.SourceTarget == nn_M || c.DestinationTarget == nn_M {
 		cycles += 2
 	}
 	if c.SourceTarget == n {
@@ -82,6 +82,9 @@ func (c *CPU) Ld16() int {
 
 	if c.SourceTarget == nn {
 		cycles += 2
+	}
+	if c.DestinationTarget == SP {
+		cycles += 1
 	}
 	if c.DestinationTarget == nn_M16 {
 		cycles += 4	
@@ -174,6 +177,9 @@ func (c *CPU) Ret() int {
 		//Jp
 		c.Register.pc = (hi << 8) | lo
 
+		if c.currentOpcode == 0xc9 {
+			return 4
+		}
 		return 5
 	}
 
@@ -213,9 +219,14 @@ func (c *CPU) Di() int {
 }
 
 func (c *CPU) Ei() int {
-	//TODO: Implement
-	
+	c.EnableMasterInterruptAfter = 2
+
 	return 1
+}
+
+func (c *CPU) Halt() int {
+	c.Halted = true
+	return 0
 }
 
 //Decimal Adjust Accumulator

@@ -2,7 +2,6 @@ package lib
 
 import (
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -43,7 +42,21 @@ func Log(c *CPU, f *os.File) {
 	//output := fmt.Sprintf("%s Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x SP: %x \n", pcData, instruction.InstructionType, instruction.Destination, instruction.Source, c.Register.a, flags, c.Register.b, c.Register.c, c.Register.d, c.Register.e, c.Register.h, c.Register.l, c.Register.sp)
 	fmt.Print(doctor)
 
-	if _, err := f.Write([]byte(doctor)); err != nil {
-        log.Fatal(err)
-    }
+	// if _, err := f.Write([]byte(doctor)); err != nil {
+    //     log.Fatal(err)
+    // }
+
+	// if c.printTimers {
+	// flags := fmt.Sprintf("Div: %x, Div tim: %x, counter: %x, counter tim: %x, modulo: %x, control: %x\n", 
+	// c.Bus.clock.Divider,
+	// c.Bus.clock.Counter,
+	// c.Bus.clock.CounterTimer,
+	// c.Bus.clock.Modulo,
+	// c.Bus.clock.Control)
+
+	// if _, err := f.Write([]byte(flags)); err != nil {
+    //     log.Fatal(err)
+    // }
+	// }
+	
 }

@@ -85,6 +85,5 @@ func (c *Cart) CartRead(a uint16) uint8 {
 }
 
 func (c *Cart) CartWrite(a uint16, val uint8) {
-	fmt.Printf("Cart write not implemented, %x\n", a)
 	c.Rom[a] = val
 }

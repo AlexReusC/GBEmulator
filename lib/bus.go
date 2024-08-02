@@ -9,12 +9,17 @@ type Bus struct {
 	serial *Serial
 	ieRegister uint8
 	interruptorFlags uint8
+	clock *Clock
 }
 
 func LoadBus(rb *Cart, s *Serial) (*Bus, error) {
 	b := &Bus{cart: rb, serial: s}
 
 	return b, nil
+}
+
+func (b *Bus) BusLoadClock(c *Clock) {
+	b.clock = c
 }
 
 func (b *Bus) BusRead(a uint16) uint8 {
@@ -49,8 +54,26 @@ func (b *Bus) BusRead(a uint16) uint8 {
 		return 0
 	}
 	// IO registers
+	if a < 0xFF03 {
+		return b.serial.SerialRead(a, b.clock)
+	}
+	if a >= 0xFF04 && a <= 0xFF07 {
+		return b.clock.Read(a)
+	}
+	if a == 0xFF0F {
+		return b.interruptorFlags
+	}
+	if a < 0xFF44 {
+		//fmt.Println("address not implemented")
+		return 0
+	}
+	//GPU
+	if a == 0xFF44 {
+		return 0x90
+	}
 	if a < 0xFF80 {
-		return b.serial.SerialRead(a)
+		fmt.Println("address not implemented")
+		return 0
 	}
 	// High RAM
 	if a < 0xFFFF {
@@ -68,7 +91,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 		b.cart.CartWrite(a, v)
 	}	// Video RAM 
 	if a < 0xA000 {
-		fmt.Printf("Bus write not implemented %x\n", a)
+		//fmt.Printf("Bus write not implemented %x\n", a)
 		return 
 	}
 	// Cartridge/external RAM
@@ -78,7 +101,6 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// Working RAM
 	if a < 0xE000 {
-
 		b.WramWrite(a, v)
 		return
 	}
@@ -88,7 +110,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// Object attribute memory 
 	if a < 0xFEA0 {
-		fmt.Printf("Bus write not implemented %x\n", a)
+		//fmt.Printf("Bus write not implemented %x\n", a)
 		return //TODO
 	}
 	// Reserved (prohibited)
@@ -96,8 +118,21 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 		return
 	}
 	// IO registers
+	if a < 0xFF03 {
+		b.serial.SerialWrite(a, v, b.clock)
+		return
+	}
+	if a >= 0xFF04 && a <= 0xFF07 {
+		b.clock.Write(a, v)
+		return
+	}
+	if a == 0xFF0F {
+		b.interruptorFlags = v
+		return
+	}
+
 	if a < 0xFF80 {
-		b.serial.SerialWrite(a, v)
+		fmt.Println("address not implemented")
 		return
 	}
 	// High RAM
@@ -107,11 +142,12 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	}
 	// CPU enable registerr
 	if a == 0xFFFF {
+		fmt.Println("ie")
 		b.SetIeRegister(v)
 		return
 	}
 
-	fmt.Println("Bus write not implemented")
+	//fmt.Println("Bus write not implemented")
 }
 
 func (b *Bus) BusRead16(a uint16) uint16 {
