@@ -8,11 +8,10 @@ type Clock struct {
 	CounterTimer int
 	Modulo       uint8 //Tma
 	Control      uint8 //Tac/TMC
-	CPU          *CPU
 }
 
-func LoadClock(c *CPU) (*Clock, error) {
-	clock := &Clock{CPU: c, Divider: 0xABCC}
+func LoadClock() (*Clock, error) {
+	clock := &Clock{Divider: 0xABCC}
 	return clock, nil
 }
 
@@ -30,7 +29,8 @@ func (c *Clock) SetClockFrequency() {
 	}
 }
 
-func (c *Clock) Update(cycles int) {
+func (c *Clock) Update(cycles int) bool {
+	setTimerInterruptor := false
 	for i := 0; i < cycles*4; i++ {
 		prevDiv := c.Divider
 		c.Divider++
@@ -62,11 +62,11 @@ func (c *Clock) Update(cycles int) {
 			//Update counter
 			if c.Counter == 0xFF {
 				c.Counter = c.Modulo
-				c.CPU.RequestInterrupt(TIMER)
+				setTimerInterruptor = true
 			}
 		}
 	}
-
+	return setTimerInterruptor
 }
 
 func (c *Clock) Write(a uint16, v uint8) {
@@ -78,7 +78,6 @@ func (c *Clock) Write(a uint16, v uint8) {
 	case 0xFF06:
 		c.Modulo = v
 	case 0xFF07:
-
 		c.Control = v
 
 	default:

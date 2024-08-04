@@ -1,9 +1,8 @@
 package lib
 
-import "slices"
-
-//TODO: clock behavior
-
+import (
+	"slices"
+)
 
 func Isr8(t target) bool {
 	var r8 = []target {A, B, C, D, E, F, H, L}
@@ -394,8 +393,13 @@ func (c *CPU) Dec() int {
 }
 
 func (c *CPU) Add() int {
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	a := c.Register.a
-	input := uint8(c.Source.Value)
 	result := a + input
 	c.SetTarget(A, uint16(result))
 
@@ -438,8 +442,13 @@ func (c *CPU) Add16_8() int {
 }
 
 func (c *CPU) Adc() int {
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	a := c.Register.a
-	input := uint8(c.Source.Value)
 	carryBit := BoolToUint(c.GetFlag(flagC))
 
 	result := uint16(a + input + carryBit)
@@ -448,7 +457,7 @@ func (c *CPU) Adc() int {
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, (a & 0x0F) + (input & 0x0F) + carryBit > 0x0F)
-	c.SetFlag(flagC, input > 0xFF - a - carryBit)
+	c.SetFlag(flagC, int(input) > 0xFF - int(a) - int(carryBit))
 	if Isr8(c.SourceTarget) {
 		return 1
 	}
@@ -456,8 +465,13 @@ func (c *CPU) Adc() int {
 }
 
 func (c *CPU) Sub() int {
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	a := c.Register.a
-	input := uint8(c.Source.Value)
 	result := uint16(c.Register.a - input)
 	c.SetTarget(A, result)
 
@@ -473,8 +487,13 @@ func (c *CPU) Sub() int {
 }
 
 func (c *CPU) Sbc() int {
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	a := c.Register.a
-	input := uint8(c.Source.Value)
 	carryBit := BoolToUint(c.GetFlag(flagC))
 
 	result := uint16(a - input - carryBit)
@@ -483,7 +502,7 @@ func (c *CPU) Sbc() int {
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
 	c.SetFlag(flagH, (a & 0x0F) < ((input & 0x0F) + carryBit))
-	c.SetFlag(flagC, input + carryBit > a)
+	c.SetFlag(flagC, int(input) + int(carryBit) > int(a))
 
 	if Isr8(c.SourceTarget) {
 		return 1
@@ -557,14 +576,19 @@ func (c *CPU) Or() int {
 
 
 func (c *CPU) Cp() int {
+	var input uint8
+	if c.Source.IsAddr {
+		input = c.BusRead(c.Source.Value)
+	} else {
+		input = uint8(c.Source.Value)
+	}
 	a := c.Register.a
-	input := uint8(c.Source.Value)
 	result := uint16(a - input) 
 	
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
 	c.SetFlag(flagH, (a & 0x0F) < (input & 0x0F))
-	c.SetFlag(flagC, input > c.Register.a)
+	c.SetFlag(flagC, input > a)
 
 	if Isr8(c.SourceTarget) {
 		return 1
@@ -621,7 +645,7 @@ func (c *CPU) Rl(input uint16, t target) int {
 	}
 	c.SetTarget(t, result)
 	
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result & 0xFF) == 0)
 	c.SetFlag(flagN, false) 
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
@@ -629,7 +653,7 @@ func (c *CPU) Rl(input uint16, t target) int {
 	if Isr8(t) {
 		return 2
 	}
-	return 4 //Rrc [hl]
+	return 4 //Rl [hl]
 }
 
 //Rotate r right, through carry
@@ -658,7 +682,7 @@ func (c *CPU) Sla(input uint16, t target) int {
 	result := input << 1
 	c.SetTarget(t, result)
 	
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result & 0xFF) == 0)
 	c.SetFlag(flagN, false) 
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
@@ -720,7 +744,7 @@ func (c *CPU) Srl(input uint16, t target) int {
 }
 
 func (c *CPU) Bit(input uint16, t target, b uint8) int {
-	c.SetFlag(flagZ, input & (1 << b) != 0)
+	c.SetFlag(flagZ, input & (1 << b) == 0)
 	c.SetFlag(flagN, false) 
 	c.SetFlag(flagH, true)
 

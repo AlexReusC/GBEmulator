@@ -14,8 +14,13 @@ func Run() {
 		return
 	}
 
+	clock, err := LoadClock()
+	if err != nil {
+		return
+	}
+
 	serial := &Serial{data: 0, control: 0}
-	bus, err := LoadBus(cart, serial)
+	bus, err := LoadBus(cart, serial, clock)
 	if err != nil {
 		return
 	}
@@ -29,48 +34,18 @@ func Run() {
 
 	debug := LoadDebug()
 
-	cpu, err := LoadCpu(bus, debug)
+	cpu, err := LoadCpu(bus, debug, clock)
 	if err != nil {
 		return
 	}
 
-	clock, err := LoadClock(cpu)
-	if err != nil {
-		return
-	}
-
-	bus.BusLoadClock(clock)
-
-	/*
-	for i := 0; i <= 0xFF; i++ {
-		v, ok := instructions[uint8(i)]
-		if ok {
-			cpu.SourceTarget = v.Source
-			cpu.DestinationTarget = v.Destination
-			cpu.currentOpcode = uint8(i)	
-			cpu.CurrentConditionResult = true
-			if v.ConditionType != cond_None{
-				cycles, _ := cpu.ExecuteInstruction(v)
-				fmt.Printf("%x True %d\n",i, cycles)
-				cpu.CurrentConditionResult = false 
-				cycles, _ = cpu.ExecuteInstruction(v)
-				fmt.Printf("%x False %d\n",i, cycles)
-			} else{
-				cycles, _ := cpu.ExecuteInstruction(v)
-				fmt.Printf("%x %d\n",i, cycles)
-			}
-
-		}
-		
-	}
-	*/	
 	for {
 		cycles, err := cpu.Step(f)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-			clock.Update(cycles)
+		cpu.UpdateClock(cycles)
 		//TODO: GPU
 		cpu.HandleInterrupts()
 	}

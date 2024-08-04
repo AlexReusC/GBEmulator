@@ -12,142 +12,88 @@ type Bus struct {
 	clock *Clock
 }
 
-func LoadBus(rb *Cart, s *Serial) (*Bus, error) {
-	b := &Bus{cart: rb, serial: s}
+func LoadBus(rb *Cart, s *Serial, c *Clock) (*Bus, error) {
+	b := &Bus{cart: rb, serial: s, clock: c}
 
 	return b, nil
 }
 
-func (b *Bus) BusLoadClock(c *Clock) {
-	b.clock = c
-}
 
 func (b *Bus) BusRead(a uint16) uint8 {
-	// ROM data
-	if a < 0x8000 {
+	switch {
+	case a < 0x8000: // ROM data
 		return b.cart.CartRead(a)
-	}
-	// Video RAM 
-	if a < 0xA000 {
-		fmt.Printf("Bus read not implemented %x\n", a)
+	case a < 0xA000: // Video RAM
+		//fmt.Printf("Bus read not implemented %x\n", a)
 		return 0x0000
-	}
-	// Cartridge/external RAM
-	if a < 0xC000 {
+	case a < 0xC000: // Cartridge/external RAM
 		return b.cart.CartRead(a)
-	}
-	// Working RAM
-	if a < 0xE000 {
+	case a < 0xE000: // Working RAM
 		return b.WramRead(a)
-	}
-	// Echo RAM (prohibited)
-	if a < 0xFE00 {
+	case a < 0xFE00: // Echo RAM (prohibited)
 		return 0
-	}
-	// Object attribute memory 
-	if a < 0xFEA0 {
-		fmt.Printf("Bus read not implemented %x\n", a)
+	case a < 0xFEA0: // Object attribute memory
+		//fmt.Printf("Bus read not implemented %x\n", a)
 		return 0 //TODO
-	}
-	// Reserved (prohibited)
-	if a < 0xFF00 {
+	case a < 0xFF00: // Reserved (prohibited)
 		return 0
-	}
-	// IO registers
-	if a < 0xFF03 {
+	case a < 0xFF03: // IO registers
 		return b.serial.SerialRead(a, b.clock)
-	}
-	if a >= 0xFF04 && a <= 0xFF07 {
+	case a >= 0xFF04 && a <= 0xFF07:
 		return b.clock.Read(a)
-	}
-	if a == 0xFF0F {
+	case a == 0xFF0F:
 		return b.interruptorFlags
-	}
-	if a < 0xFF44 {
+	case a < 0xFF44:
 		//fmt.Println("address not implemented")
 		return 0
-	}
-	//GPU
-	if a == 0xFF44 {
+	case a == 0xFF44: //GPU
 		return 0x90
-	}
-	if a < 0xFF80 {
-		fmt.Println("address not implemented")
+	case a == 0xFF4D:
+		return 0xFF
+	case a < 0xFF80:
+		//fmt.Println("address not implemented")
+		return 0
+	case a < 0xFFFF: // High RAM
+		return b.HramRead(a)
+	case a == 0xFFFF: // CPU enable registerr
+		return b.GetIeRegister()
+	default:
 		return 0
 	}
-	// High RAM
-	if a < 0xFFFF {
-		return b.HramRead(a)
-	}
-	// CPU enable registerr
-	if a == 0xFFFF {
-		return b.GetIeRegister()
-	}
-	return 0
 }
 
 func (b *Bus) BusWrite(a uint16, v uint8) {
-	if a < 0x8000 {
+	switch {
+	case a < 0x8000:
 		b.cart.CartWrite(a, v)
-	}	// Video RAM 
-	if a < 0xA000 {
+	case a < 0xA000: // Video RAM 
 		//fmt.Printf("Bus write not implemented %x\n", a)
-		return 
-	}
-	// Cartridge/external RAM
-	if a < 0xC000 {
+	case a < 0xC000: // Cartridge/external RAM
 		b.cart.CartWrite(a, v)
-		return
-	}
-	// Working RAM
-	if a < 0xE000 {
+	case a < 0xE000: // Working RAM
 		b.WramWrite(a, v)
+	case a < 0xFE00: // Echo RAM (prohibited)
 		return
-	}
-	// Echo RAM (prohibited)
-	if a < 0xFE00 {
-		return
-	}
-	// Object attribute memory 
-	if a < 0xFEA0 {
+	case a < 0xFEA0: // Object attribute memory
 		//fmt.Printf("Bus write not implemented %x\n", a)
 		return //TODO
-	}
-	// Reserved (prohibited)
-	if a < 0xFF00 {
-		return
-	}
-	// IO registers
-	if a < 0xFF03 {
+	case a < 0xFF00: // Reserved (prohibited)
+		return 
+	case a < 0xFF03:// IO registers
 		b.serial.SerialWrite(a, v, b.clock)
-		return
-	}
-	if a >= 0xFF04 && a <= 0xFF07 {
+	case a >= 0xFF04 && a <= 0xFF07:
 		b.clock.Write(a, v)
-		return
-	}
-	if a == 0xFF0F {
+	case a == 0xFF0F:
 		b.interruptorFlags = v
-		return
-	}
-
-	if a < 0xFF80 {
-		fmt.Println("address not implemented")
-		return
-	}
-	// High RAM
-	if a < 0xFFFF {
+	case a < 0xFF80:
+		//fmt.Println("address not implemented")
+	case a >= 0xFF80 && a < 0xFFFF: // High RAM
 		b.HramWrite(a, v)
-		return
-	}
-	// CPU enable registerr
-	if a == 0xFFFF {
-		fmt.Println("ie")
+	case a == 0xFFFF: // CPU enable registerr
 		b.SetIeRegister(v)
-		return
+	default:
+		fmt.Println("Bus write unavailable", a)
 	}
-
-	//fmt.Println("Bus write not implemented")
 }
 
 func (b *Bus) BusRead16(a uint16) uint16 {
@@ -162,26 +108,9 @@ func (b *Bus) BusWrite16(a uint16, v uint16) {
 }
 
 
-func (b *Bus) WramRead(a uint16) uint8 {
-	return b.wram[a-0xC000]
-}
-
-func (b *Bus) WramWrite(a uint16, v uint8) {
-	b.wram[a-0xC000] = v
-}
-
-func (b *Bus) HramRead(a uint16) uint8 {
-	return b.hram[a-0xFF80]
-}
-
-func (b *Bus) HramWrite(a uint16, v uint8) {
-	b.hram[a-0xFF80] = v
-}
-
-func (b *Bus) GetIeRegister() uint8 {
-	return b.ieRegister
-}
-
-func (b *Bus) SetIeRegister(ir uint8) {
-	b.ieRegister = ir
-}
+func (b *Bus) WramRead(a uint16) uint8 { return b.wram[a-0xC000] }
+func (b *Bus) WramWrite(a uint16, v uint8) { b.wram[a-0xC000] = v }
+func (b *Bus) HramRead(a uint16) uint8 { return b.hram[a-0xFF80] }
+func (b *Bus) HramWrite(a uint16, v uint8) { b.hram[a-0xFF80] = v }
+func (b *Bus) GetIeRegister() uint8 { return b.ieRegister }
+func (b *Bus) SetIeRegister(ir uint8) { b.ieRegister = ir }

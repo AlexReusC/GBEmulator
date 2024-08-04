@@ -1,5 +1,7 @@
 package lib
 
+import "slices"
+
 func BoolToUint(b bool) uint8 {
 	if b {
 		return 1
@@ -24,4 +26,14 @@ func SetBit(b uint8, n int, c bool) uint8 {
 
 func UnsetBit(b uint8, n int) uint8 {
 	return SetBit(b, n, false)
+}
+
+func IsImmediateTarget8(t target) bool {
+	var pt = []target {n, n_M, SPe8}
+	return slices.Contains(pt, t)
+}
+
+func IsImmediateTarget16(t target) bool {
+	var pt = []target {nn, nn_M, nn_M16}
+	return slices.Contains(pt, t)
 }

@@ -36,6 +36,7 @@ type CPU struct {
 	Register registers
 	Bus *Bus
 	Debug *Debug
+	Clock *Clock
 
 	Halted bool
 
@@ -51,7 +52,7 @@ type CPU struct {
 	Interrupts uint8
 }
 
-func LoadCpu(b *Bus, d *Debug) (*CPU, error) {
+func LoadCpu(b *Bus, d *Debug, cl *Clock) (*CPU, error) {
 	c := &CPU{
 		Register: registers{
 			a: 	0x01,
@@ -67,30 +68,23 @@ func LoadCpu(b *Bus, d *Debug) (*CPU, error) {
 			}, 
 		Bus: b, 
 		Debug: d,
+		Clock: cl,
 	}
 
 	return c, nil
 }
 
 
-func (c *CPU) BusRead(a uint16) uint8 {
-	return c.Bus.BusRead(a)
-}
-
-func (c *CPU) BusRead16(a uint16) uint16 {
-	return c.Bus.BusRead16(a)
-}
-
-func (c *CPU) BusWrite(a uint16, v uint8) {
-	c.Bus.BusWrite(a, v)
-}
-
-func (c *CPU) BusWrite16(a uint16, v uint16) {
-	c.Bus.BusWrite16(a, v)
-}
-
-func (c *CPU) GetFlag(flag flagRegister) bool {
-	return c.Register.f & (0x1 << flag) != 0
+func (c *CPU) BusRead(a uint16) uint8 { return c.Bus.BusRead(a) }
+func (c *CPU) BusRead16(a uint16) uint16 { return c.Bus.BusRead16(a) }
+func (c *CPU) BusWrite(a uint16, v uint8) { c.Bus.BusWrite(a, v) }
+func (c *CPU) BusWrite16(a uint16, v uint16) { c.Bus.BusWrite16(a, v) }
+func (c *CPU) GetFlag(flag flagRegister) bool { return c.Register.f & (0x1 << flag) != 0 }
+func (c *CPU) UpdateClock(cycles int) {
+	changeTimer := c.Clock.Update(cycles)
+	if changeTimer {
+		c.RequestInterrupt(TIMER)
+	}
 }
 
 func (c *CPU) Step(f *os.File) (int, error) {
@@ -108,7 +102,6 @@ func (c *CPU) Step(f *os.File) (int, error) {
 
 		//Serial print
 		c.Debug.DebugUpdate(c.Bus)
-		c.Debug.DebugPrint()
 
 		instructionCycles, err := c.ExecuteInstruction(instruction)
 		if err != nil{
@@ -138,13 +131,12 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	if !ok {
 		return instruction, fmt.Errorf("opcode %x not implemented", c.currentOpcode)
 	}
-	Log(c, f)
+	DoctorLog(c, f)
 	c.Register.pc += 1
-	if instruction.Destination == n || instruction.Destination == n_M || instruction.Source == n || instruction.Source == n_M || instruction.Source == SPe8 {
+	if IsImmediateTarget8(instruction.Source) || IsImmediateTarget8(instruction.Destination) {
 		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
 		c.Register.pc += 1
-	}
-	if instruction.Destination == nn || instruction.Destination == nn_M || instruction.Destination == nn_M16 || instruction.Source == nn || instruction.Source == nn_M {
+	} else if IsImmediateTarget16(instruction.Source) || IsImmediateTarget16(instruction.Destination) {
 		c.ImmediateData = c.BusRead16(c.Register.pc)
 		c.Register.pc += 2
 	}
@@ -176,7 +168,6 @@ func (c *CPU) DecodeInstruction(instruction Instruction) error{
 
 func (c *CPU) ExecuteInstruction(i Instruction) (int, error) {
 		cycles := 0
-		//Instruction type
 		switch i.InstructionType {
 			case Nop:
 				cycles += c.Nop()
