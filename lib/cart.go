@@ -2,7 +2,6 @@ package lib
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"os"
 )
@@ -29,12 +28,8 @@ type Cart struct{
 	Rom []uint8
 }
 
-func LoadCart() (*Cart, error) {
-	if len(os.Args) <= 1 {
-		return nil, errors.New("no file passed")
-	}
-	
-	file, err := os.Open(os.Args[1])
+func LoadCart(p string) (*Cart, error) {
+	file, err := os.Open(p)
 	if err != nil{
 		fmt.Println("Failed to open")
 		return nil, err

@@ -83,7 +83,7 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 	case L:
 		return Data{uint16(c.Register.l), false}, nil
 	case SPe8:
-		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.ImmediateData)))) 
+		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.Immediate)))) 
 		return Data{val, false}, nil
 	case AF:
 		return Data{c.GetTargetAF(), false}, nil
@@ -96,9 +96,9 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 	case SP:
 		return Data{c.Register.sp, false}, nil
 	case n:
-		return Data{c.ImmediateData, false}, nil
+		return Data{c.Immediate, false}, nil
 	case nn:
-		return Data{c.ImmediateData, false}, nil
+		return Data{c.Immediate, false}, nil
 	case C_M:
 		return Data{uint16(c.Register.c), true}, nil
 	case BC_M:
@@ -116,12 +116,11 @@ func (c *CPU) GetTarget(t target) (Data, error) {
 		c.SetTarget(HL, val-1)
 		return Data{val, true}, nil
 	case n_M:
-		return Data{c.ImmediateData, true}, nil
+		return Data{c.Immediate, true}, nil
 	case nn_M:
-		return Data{c.ImmediateData, true}, nil
+		return Data{c.Immediate, true}, nil
 	case None:
 		return Data{0, false}, nil
-	// TODO: Other targets
 	default:
 		return Data{0, false}, errors.New("unknown target type")
 	}
@@ -172,9 +171,9 @@ func (c *CPU) SetTarget(t target, v uint16) {
 	case SP:
 		c.Register.sp = v
 	case nn_M:
-		c.BusWrite(c.ImmediateData, uint8(v))
+		c.BusWrite(c.Immediate, uint8(v))
 	case nn_M16:
-		c.BusWrite16(c.ImmediateData, v)
+		c.BusWrite16(c.Immediate, v)
 	default:
 		fmt.Printf("Unknown register %s for setting\n", t)
 		panic(0)

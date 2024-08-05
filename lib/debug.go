@@ -36,6 +36,10 @@ func (d *Debug) DebugPrint() {
 	}
 }
 
+func (d *Debug) GetMsg() string {
+	return string(d.debugMsg)
+}
+
 func Log(c *CPU, i Instruction, f *os.File) {
 	pcData := fmt.Sprintf("Pc: %x, (%02x %02x %02x) -> ", c.Register.pc, c.currentOpcode, c.BusRead(c.Register.pc+1), c.BusRead(c.Register.pc+2))
 	flags := fmt.Sprintf("%c%c%c%c", c.FormatFlag(flagZ, 'Z'), c.FormatFlag(flagN, 'N'), c.FormatFlag(flagH, 'H'), c.FormatFlag(flagC, 'C'))

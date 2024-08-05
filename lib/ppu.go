@@ -1,4 +1,8 @@
 package lib
 
-type Ppu struct {
+type PPU struct {
+	Sprites []Sprite
+}
+
+type Sprite struct {
 }

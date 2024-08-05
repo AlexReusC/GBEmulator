@@ -43,7 +43,7 @@ type CPU struct {
 	Source Data
 	SourceTarget target
 	DestinationTarget target
-	ImmediateData uint16
+	Immediate uint16
 	CurrentConditionResult bool
 	currentOpcode uint8
 
@@ -131,13 +131,15 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	if !ok {
 		return instruction, fmt.Errorf("opcode %x not implemented", c.currentOpcode)
 	}
-	DoctorLog(c, f)
+	if f != nil {
+		DoctorLog(c, f)
+	}
 	c.Register.pc += 1
 	if IsImmediateTarget8(instruction.Source) || IsImmediateTarget8(instruction.Destination) {
-		c.ImmediateData = uint16(c.BusRead(c.Register.pc))
+		c.Immediate = uint16(c.BusRead(c.Register.pc))
 		c.Register.pc += 1
 	} else if IsImmediateTarget16(instruction.Source) || IsImmediateTarget16(instruction.Destination) {
-		c.ImmediateData = c.BusRead16(c.Register.pc)
+		c.Immediate = c.BusRead16(c.Register.pc)
 		c.Register.pc += 2
 	}
 	return instruction, nil
