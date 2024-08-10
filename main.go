@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	
 	//logging
 	f, err := os.Create("../gameboy-doctor/debug.txt")
     if err != nil {
@@ -17,15 +18,15 @@ func main() {
 
 	if len(os.Args) <= 1 {
 		fmt.Println("no file passed")
+		return
 	}
 	p := os.Args[1]
 
-	emu, err := lib.LoadEmulator(lib.WithFile(f), lib.WithCart(p))
+	e, err := lib.LoadEmulator(lib.WithFile(f), lib.WithCart(p))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	for {
-		emu.Run()
-	}
+
+	lib.RunGame(e)
 }
