@@ -10,6 +10,8 @@ type Emulator struct {
 	Cpu *CPU
 	cart *Cart
 	file *os.File
+	ppu *PPU
+	bus *Bus
 }
 
 func WithFile(f *os.File) func(e *Emulator) {
@@ -41,15 +43,22 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 		return nil, errors.New("clock failed")
 	}
 
+	ppu, err := LoadPpu()
+	if err != nil {
+		return nil, errors.New("ppu failed")
+	}
+	emulator.ppu = ppu 
+
 	serial := &Serial{data: 0, control: 0}
-	bus, err := LoadBus(emulator.cart, serial, clock)
+	b, err := LoadBus(emulator.cart, serial, clock, emulator.ppu)
 	if err != nil {
 		return nil, errors.New("bus failed")
 	}
+	emulator.bus = b
 
 	debug := LoadDebug()
 
-	cpu, err := LoadCpu(bus, debug, clock)
+	cpu, err := LoadCpu(emulator.bus, debug, clock)
 	if err != nil {
 		return nil, errors.New("cpu failed")
 	}

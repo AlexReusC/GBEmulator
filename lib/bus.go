@@ -10,10 +10,11 @@ type Bus struct {
 	ieRegister uint8
 	interruptorFlags uint8
 	clock *Clock
+	ppu *PPU
 }
 
-func LoadBus(rb *Cart, s *Serial, c *Clock) (*Bus, error) {
-	b := &Bus{cart: rb, serial: s, clock: c}
+func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*Bus, error) {
+	b := &Bus{cart: rb, serial: s, clock: c, ppu: p}
 
 	return b, nil
 }
@@ -24,8 +25,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	case a < 0x8000: // ROM data
 		return b.cart.CartRead(a)
 	case a < 0xA000: // Video RAM
-		//fmt.Printf("Bus read not implemented %x\n", a)
-		return 0x0000
+		return b.ppu.VramRead(a)
 	case a < 0xC000: // Cartridge/external RAM
 		return b.cart.CartRead(a)
 	case a < 0xE000: // Working RAM
@@ -33,8 +33,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	case a < 0xFE00: // Echo RAM (prohibited)
 		return 0
 	case a < 0xFEA0: // Object attribute memory
-		//fmt.Printf("Bus read not implemented %x\n", a)
-		return 0 //TODO
+		return b.ppu.oamRead(a)
 	case a < 0xFF00: // Reserved (prohibited)
 		return 0
 	case a < 0xFF03: // IO registers
@@ -67,7 +66,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	case a < 0x8000:
 		b.cart.CartWrite(a, v)
 	case a < 0xA000: // Video RAM 
-		//fmt.Printf("Bus write not implemented %x\n", a)
+		b.ppu.VramWrite(a, v)
 	case a < 0xC000: // Cartridge/external RAM
 		b.cart.CartWrite(a, v)
 	case a < 0xE000: // Working RAM
@@ -75,8 +74,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	case a < 0xFE00: // Echo RAM (prohibited)
 		return
 	case a < 0xFEA0: // Object attribute memory
-		//fmt.Printf("Bus write not implemented %x\n", a)
-		return //TODO
+		b.ppu.oamwrite(a, v)
 	case a < 0xFF00: // Reserved (prohibited)
 		return 
 	case a < 0xFF03:// IO registers
