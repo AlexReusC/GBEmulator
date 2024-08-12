@@ -11,10 +11,12 @@ type Bus struct {
 	interruptorFlags uint8
 	clock *Clock
 	ppu *PPU
+
+	fakeGpu uint8
 }
 
 func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*Bus, error) {
-	b := &Bus{cart: rb, serial: s, clock: c, ppu: p}
+	b := &Bus{cart: rb, serial: s, clock: c, ppu: p, fakeGpu: 0}
 
 	return b, nil
 }
@@ -46,7 +48,9 @@ func (b *Bus) BusRead(a uint16) uint8 {
 		//fmt.Println("address not implemented")
 		return 0
 	case a == 0xFF44: //GPU
-		return 0x90
+		rv := b.fakeGpu
+		b.fakeGpu++
+		return rv
 	case a == 0xFF4D:
 		return 0xFF
 	case a < 0xFF80:
@@ -83,6 +87,8 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 		b.clock.Write(a, v)
 	case a == 0xFF0F:
 		b.interruptorFlags = v
+	case a < 0xFF46:
+		b.DmaTransfer(v)
 	case a < 0xFF80:
 		//fmt.Println("address not implemented")
 	case a >= 0xFF80 && a < 0xFFFF: // High RAM
@@ -91,6 +97,14 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 		b.SetIeRegister(v)
 	default:
 		fmt.Println("Bus write unavailable", a)
+	}
+}
+
+func (b *Bus) DmaTransfer(a uint8) {
+	realAddress := uint16(a) << 8
+	for i := uint16(0); i < 0xA0; i++ {
+		v := b.BusRead(realAddress + i)
+		b.ppu.oamwrite(0xFE00 + i, v)
 	}
 }
 

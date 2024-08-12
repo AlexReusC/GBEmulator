@@ -70,7 +70,7 @@ func (p *PPU) oamwrite(a uint16, v uint8) {
 }
 
 func (p *PPU) DisplayTile(tile int, image *ebiten.Image, x int, y int) {
-	colors := []color.Color{color.White, color.Gray16{0xFF55}, color.Gray16{0xFFAA}, color.Black}
+	colors := []color.Color{color.White, color.Gray{0xAA}, color.Gray{0x55}, color.Black}
 
 	var tileY int
 	for tileY = 0; tileY < 16; tileY += 2 {
