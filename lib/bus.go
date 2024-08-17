@@ -39,7 +39,7 @@ func (b *Bus) BusRead(a uint16) uint8 {
 	case a < 0xFF00: // Reserved (prohibited)
 		return 0
 	case a < 0xFF03: // IO registers
-		return b.serial.SerialRead(a, b.clock)
+		return b.serial.SerialRead(a)
 	case a >= 0xFF04 && a <= 0xFF07:
 		return b.clock.Read(a)
 	case a == 0xFF0F:
@@ -82,7 +82,7 @@ func (b *Bus) BusWrite(a uint16, v uint8) {
 	case a < 0xFF00: // Reserved (prohibited)
 		return 
 	case a < 0xFF03:// IO registers
-		b.serial.SerialWrite(a, v, b.clock)
+		b.serial.SerialWrite(a, v)
 	case a >= 0xFF04 && a <= 0xFF07:
 		b.clock.Write(a, v)
 	case a == 0xFF0F:
