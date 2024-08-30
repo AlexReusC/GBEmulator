@@ -74,6 +74,6 @@ func (e *Emulator) Run() {
 		return
 	}
 	e.Cpu.UpdateClock(cycles)
-	//e.ppu.Update(cycles)
+	e.ppu.Update(cycles)
 	e.Cpu.HandleInterrupts()
 }

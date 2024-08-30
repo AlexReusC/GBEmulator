@@ -13,6 +13,13 @@ func Union16(h, l uint8) uint16 {
 	return uint16(h)<<8 | uint16(l)
 }
 
+func BitIsSet(b uint8, n uint8) bool {
+	if n & (1 << b)  != 0 {
+		return true
+	}
+	return false
+}
+
 //TODO: Separate both functions, this is temporal
 
 func SetBit(b uint8, n int, c bool) uint8 {
