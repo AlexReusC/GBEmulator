@@ -53,6 +53,4 @@ func (c *CPU) HandleInterrupts() {
 	}
 }
 
-func (c *CPU) RequestInterrupt(i InterruptorBit) {
-	c.Bus.interruptorFlags |= (1 << i)
-}
+

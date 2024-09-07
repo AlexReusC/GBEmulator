@@ -83,7 +83,7 @@ func (c *CPU) GetFlag(flag flagRegister) bool { return c.Register.f & (0x1 << fl
 func (c *CPU) UpdateClock(cycles int) {
 	changeTimer := c.Clock.Update(cycles)
 	if changeTimer {
-		c.RequestInterrupt(TIMER)
+		c.Bus.RequestInterrupt(TIMER)
 	}
 }
 

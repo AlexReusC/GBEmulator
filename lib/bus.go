@@ -16,6 +16,7 @@ type Bus struct {
 func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*Bus, error) {
 	b := &Bus{cart: rb, serial: s, clock: c, ppu: p}
 
+	p.Bus = b
 	return b, nil
 }
 
@@ -123,3 +124,7 @@ func (b *Bus) HramRead(a uint16) uint8 { return b.hram[a-0xFF80] }
 func (b *Bus) HramWrite(a uint16, v uint8) { b.hram[a-0xFF80] = v }
 func (b *Bus) GetIeRegister() uint8 { return b.ieRegister }
 func (b *Bus) SetIeRegister(ir uint8) { b.ieRegister = ir }
+
+func (b *Bus) RequestInterrupt(i InterruptorBit) {
+	b.interruptorFlags |= (1 << i)
+}

@@ -1,11 +1,12 @@
 package lib
 
 import (
-	"image/color"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
+
+var DebugScreenOffset = 22
 
 type Screen struct {
 	emulator *Emulator
@@ -13,37 +14,43 @@ type Screen struct {
 }
 
 func (s *Screen) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{50, 100, 50, 50})
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(2, 2)
+	image := ebiten.NewImageFromImage(s.emulator.ppu.Image)
+	screen.DrawImage(image, op)
 
-	image := ebiten.NewImage(620, 620)
+
+/* 	image := ebiten.NewImage(600, 400)
 	var tileNum int = 0
 
 	for y := 0; y < 24; y++ {
 		for x := 0; x < 16; x++{
-			s.emulator.ppu.DisplayTile(tileNum, image, x, y)
+			s.emulator.ppu.DisplayTile(tileNum, image, x+DebugScreenOffset, y)
 			tileNum++
 		}
 	}
 	
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(2, 2)
-	screen.DrawImage(image, op)
+	screen.DrawImage(image, op) */
 }
 
 func (s *Screen) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 256, 384
+	return 650, 400
 }
 
 func (s *Screen) Update() error {
+	//TODO: probably this is unstable
 	s.emulator.Run()
 	return nil
 }
 
 func RunGame(e *Emulator) {
 	screen := &Screen{emulator: e}
-	ebiten.SetWindowSize(600, 600)
+	ebiten.SetWindowSize(650, 400)
 	ebiten.SetWindowTitle("GBEmulator")
-	ebiten.SetTPS(60*80)
+
+	ebiten.SetTPS(60*80*4)
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)
 	}

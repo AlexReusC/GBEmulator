@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,10 +20,10 @@ const (
 )
 
 const (
-	hBlankMode PPUMode = iota + 1
-	vBlankMode
-	oamMode
-	PixelTransferModel
+	HBlank PPUMode = iota
+	VBlank
+	OamSearch
+	PixelTransfer
 )
 
 type Sprite struct {
@@ -33,7 +34,12 @@ type Sprite struct {
 }
 
 type PPU struct {
-	lineDots uint16
+	dots uint16
+	pixels uint16
+	mode PPUMode
+	pixelFetcher *PixelFetcher
+	Image *image.RGBA
+	Bus *Bus
 	//registers
 
 	oam  [40]Sprite
@@ -41,15 +47,18 @@ type PPU struct {
 	//lcd
 	lcdControl, stat uint8
 	scy, scx uint8
-	ly, lyc uint8
+	ly uint8 //scan line
+	lyc uint8
 	wy, wx uint8
 	bgp, obp0, obp1 uint8
 }
 
 func LoadPpu() (*PPU, error) {
 	//ppu initial values
-	c := new(PPU)
-	return c, nil
+	p := new(PPU)
+	p.Image = image.NewRGBA(image.Rectangle{image.Point{0,0}, image.Point{160, 144}})
+	p.pixelFetcher = LoadPixelFetcher(p)
+	return p, nil
 }
 
 func (p *PPU) LcdRead(a uint16) uint8 {
@@ -93,37 +102,72 @@ func (p *PPU) LcdWrite(a uint16, v uint8) {
 }  
 
 func (p *PPU) GetColor() {
-	//TODO
-}
-
-func (p *PPU) SetMode(m PPUMode) {
-	switch m {
-		case hBlankMode:
-		case vBlankMode:
-		case oamMode:
-		case PixelTransferModel: 
-		default:
-			panic(fmt.Sprintf("unexpected ppu mode %d", m))
-	}
+	//TODO: palettes
 }
 
 func (p *PPU) Update(cycles int) {
-
-	for i := 0; i < cycles*4; i++ {
-		//scanlines
-		p.lineDots++
-		if p.lineDots > 456 {
-			p.lineDots = 0
-			p.ly++
-
-			if p.ly < 144 {
-
-			} else if p.ly == 144 { // vertical blank
-				
-			} else if p.ly == 153 { // new frame
-				p.ly = 0
+	switch p.mode {
+		case HBlank:
+			p.dots++
+			//HBlank work
+			if p.dots == 456 {
+				p.ly++
+				if p.ly == p.lyc {
+					p.Bus.RequestInterrupt(LCDSATUS)
+				}
+				p.dots = 0
+				if p.ly < 144 {
+					p.mode = OamSearch
+				} else {
+					p.mode = VBlank
+				}
 			}
-		}
+		case VBlank:
+			p.dots++
+			//VBlank work here
+			if p.dots == 456 {
+				p.ly++
+				if p.ly == p.lyc {
+					p.Bus.RequestInterrupt(LCDSATUS)
+				}
+				if p.ly == 154 { //ppu has visited last line (153)
+					p.ly = 0
+					p.mode = OamSearch
+				}
+				p.dots = 0
+			}
+		case OamSearch:
+			//OamSearch work here
+			p.dots++
+			if p.dots == 80 {
+				p.mode = PixelTransfer
+			}
+		case PixelTransfer: 
+			//PixelTransfer work here
+			colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}}
+			p.dots++
+
+			index := (((p.pixels+uint16(p.scx)) / 8) + ((uint16(p.ly+p.scy) / 8) * 32))
+
+			p.pixelFetcher.Update(p.dots, index)
+
+			if len(p.pixelFetcher.queue) <= 8 {
+				return
+			}
+
+			pixelData := p.pixelFetcher.queue[0]
+			p.pixelFetcher.queue = p.pixelFetcher.queue[1:]
+
+			p.Image.SetRGBA(int(p.pixels), int(p.ly), colors[int(pixelData)])
+			p.pixels++
+
+			if p.pixels == 160 {
+				p.pixels = 0
+				p.mode = HBlank
+				p.pixelFetcher.queue = []uint8{}
+			}
+		default:
+			panic(fmt.Sprintf("unexpected ppu mode %d", p.mode))
 	}
 }
 
