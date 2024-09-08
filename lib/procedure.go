@@ -54,7 +54,7 @@ func (c *CPU) Ld8() int {
 	var input uint8
 
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -110,12 +110,12 @@ func (c *CPU) Ldh() int {
 	var input uint8
 
 	if c.Source.IsAddr {	
-		input = c.BusRead(0xFF00 | uint16(c.Source.Value))
+		input = c.MMURead(0xFF00 | uint16(c.Source.Value))
 		c.SetTarget(A, uint16(input)) //If destination is not address is always register A
 	} else {
 		input = uint8(c.Source.Value)
 		destinationData, _ := c.GetTarget(c.DestinationTarget)
-		c.BusWrite(0xFF00|destinationData.Value, input)
+		c.MMUWrite(0xFF00|destinationData.Value, input)
 	}
 
 	if c.SourceTarget == C_M || c.DestinationTarget == C_M {
@@ -126,17 +126,17 @@ func (c *CPU) Ldh() int {
 
 func (c *CPU) Push() int {
 	c.Register.sp -= 1
-	c.BusWrite(c.Register.sp, uint8((c.Source.Value&0xFF00)>>8))
+	c.MMUWrite(c.Register.sp, uint8((c.Source.Value&0xFF00)>>8))
 
 	c.Register.sp -= 1
-	c.BusWrite(c.Register.sp, uint8(c.Source.Value&0xFF))
+	c.MMUWrite(c.Register.sp, uint8(c.Source.Value&0xFF))
 
 	return 4
 }
 
 func (c *CPU) Pop() int {
-	lo := uint16(c.BusRead(c.Register.sp))
-	hi := uint16(c.BusRead(c.Register.sp+1))
+	lo := uint16(c.MMURead(c.Register.sp))
+	hi := uint16(c.MMURead(c.Register.sp+1))
 	c.Register.sp += 2
 	result := (hi<<8)|lo
 
@@ -152,9 +152,9 @@ func (c *CPU) Call() int {
 	if c.CurrentConditionResult {
 		//Push pc
 		c.Register.sp -= 1
-		c.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
+		c.MMUWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 		c.Register.sp -= 1
-		c.BusWrite(c.Register.sp, uint8(c.Register.pc&0x00FF))
+		c.MMUWrite(c.Register.sp, uint8(c.Register.pc&0x00FF))
 
 		//Jp nn
 		c.Register.pc = c.Source.Value
@@ -168,10 +168,10 @@ func (c *CPU) Call() int {
 func (c *CPU) Ret() int {
 	if c.CurrentConditionResult {
 		//Pop
-		lo := uint16(c.BusRead(c.Register.sp))
+		lo := uint16(c.MMURead(c.Register.sp))
 		c.Register.sp += 1
 
-		hi := uint16(c.BusRead(c.Register.sp))
+		hi := uint16(c.MMURead(c.Register.sp))
 		c.Register.sp += 1
 		//Jp
 		c.Register.pc = (hi << 8) | lo
@@ -187,10 +187,10 @@ func (c *CPU) Ret() int {
 
 func (c *CPU) Reti() int {
 	//Pop
-	lo := uint16(c.BusRead(c.Register.sp))
+	lo := uint16(c.MMURead(c.Register.sp))
 	c.Register.sp += 1
 
-	hi := uint16(c.BusRead(c.Register.sp))
+	hi := uint16(c.MMURead(c.Register.sp))
 	c.Register.sp += 1
 	//Jp
 	c.Register.pc = (hi << 8) | lo
@@ -202,9 +202,9 @@ func (c *CPU) Reti() int {
 
 func (c *CPU) Rst() int {
 	c.Register.sp -= 1
-	c.BusWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
+	c.MMUWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 	c.Register.sp -= 1
-	c.BusWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
+	c.MMUWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
 
 	c.Register.pc = (0x00 << 8) | rstAddress[c.currentOpcode]
 
@@ -351,7 +351,7 @@ func (c *CPU) Scf() int {
 func (c *CPU) Inc() int {
 	input := c.Source.Value
 	if c.Source.IsAddr {
-		input = uint16(c.BusRead(input))
+		input = uint16(c.MMURead(input))
 	}
 	result := input + 1
 	c.SetTarget(c.SourceTarget, result)
@@ -373,7 +373,7 @@ func (c *CPU) Inc() int {
 func (c *CPU) Dec() int {
 	input := c.Source.Value
 	if c.Source.IsAddr {
-		input = uint16(c.BusRead(input))
+		input = uint16(c.MMURead(input))
 	}
 	result := input - 1
 	c.SetTarget(c.SourceTarget, result)
@@ -395,7 +395,7 @@ func (c *CPU) Dec() int {
 func (c *CPU) Add() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -444,7 +444,7 @@ func (c *CPU) Add16_8() int {
 func (c *CPU) Adc() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -467,7 +467,7 @@ func (c *CPU) Adc() int {
 func (c *CPU) Sub() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -489,7 +489,7 @@ func (c *CPU) Sub() int {
 func (c *CPU) Sbc() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -513,7 +513,7 @@ func (c *CPU) Sbc() int {
 func (c *CPU) And() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -535,7 +535,7 @@ func (c *CPU) And() int {
 func (c *CPU) Xor() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -556,7 +556,7 @@ func (c *CPU) Xor() int {
 func (c *CPU) Or() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -578,7 +578,7 @@ func (c *CPU) Or() int {
 func (c *CPU) Cp() int {
 	var input uint8
 	if c.Source.IsAddr {
-		input = c.BusRead(c.Source.Value)
+		input = c.MMURead(c.Source.Value)
 	} else {
 		input = uint8(c.Source.Value)
 	}
@@ -786,7 +786,7 @@ func (c *CPU) Cb() (int, error) {
 
 	input := data.Value
 	if data.IsAddr {
-		input = uint16(c.BusRead(data.Value))
+		input = uint16(c.MMURead(data.Value))
 	}
 
 	switch instruction.Instruction{

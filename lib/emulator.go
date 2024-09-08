@@ -11,7 +11,7 @@ type Emulator struct {
 	cart *Cart
 	file *os.File
 	ppu *PPU
-	bus *Bus
+	mmu *MMU
 }
 
 func WithFile(f *os.File) func(e *Emulator) {
@@ -54,11 +54,11 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 	if err != nil {
 		return nil, errors.New("bus failed")
 	}
-	emulator.bus = b
+	emulator.mmu = b
 
 	debug := LoadDebug()
 
-	cpu, err := LoadCpu(emulator.bus, debug, clock)
+	cpu, err := LoadCpu(emulator.mmu, debug, clock)
 	if err != nil {
 		return nil, errors.New("cpu failed")
 	}

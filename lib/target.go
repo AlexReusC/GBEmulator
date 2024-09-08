@@ -157,23 +157,23 @@ func (c *CPU) SetTarget(t target, v uint16) {
 		c.Register.h = uint8((v & 0xFF00) >> 8)
 		c.Register.l = uint8(v & 0xFF)
 	case BC_M:
-		c.BusWrite(c.GetTargetBC(), uint8(v))
+		c.MMUWrite(c.GetTargetBC(), uint8(v))
 	case DE_M:
-		c.BusWrite(c.GetTargetDE(), uint8(v))
+		c.MMUWrite(c.GetTargetDE(), uint8(v))
 	case HL_M:
-		c.BusWrite(c.GetTargetHL(), uint8(v))
+		c.MMUWrite(c.GetTargetHL(), uint8(v))
 	case HLP_M:
-		c.BusWrite(c.GetTargetHL(), uint8(v))
+		c.MMUWrite(c.GetTargetHL(), uint8(v))
 		c.SetTarget(HL, c.GetTargetHL()+1)
 	case HLM_M:
-		c.BusWrite(c.GetTargetHL(), uint8(v))
+		c.MMUWrite(c.GetTargetHL(), uint8(v))
 		c.SetTarget(HL, c.GetTargetHL()-1)
 	case SP:
 		c.Register.sp = v
 	case nn_M:
-		c.BusWrite(c.Immediate, uint8(v))
+		c.MMUWrite(c.Immediate, uint8(v))
 	case nn_M16:
-		c.BusWrite16(c.Immediate, v)
+		c.MMUWrite16(c.Immediate, v)
 	default:
 		fmt.Printf("Unknown register %s for setting\n", t)
 		panic(0)

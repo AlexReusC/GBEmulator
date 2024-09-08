@@ -34,7 +34,7 @@ type Data struct {
 
 type CPU struct {
 	Register registers
-	Bus *Bus
+	MMU *MMU
 	Debug *Debug
 	Clock *Clock
 
@@ -52,7 +52,7 @@ type CPU struct {
 	Interrupts uint8
 }
 
-func LoadCpu(b *Bus, d *Debug, cl *Clock) (*CPU, error) {
+func LoadCpu(m *MMU, d *Debug, cl *Clock) (*CPU, error) {
 	c := &CPU{
 		Register: registers{
 			a: 	0x01,
@@ -66,7 +66,7 @@ func LoadCpu(b *Bus, d *Debug, cl *Clock) (*CPU, error) {
 			pc: 0x0100, 
 			sp: 0xFFFE,
 			}, 
-		Bus: b, 
+		MMU: m, 
 		Debug: d,
 		Clock: cl,
 	}
@@ -75,15 +75,15 @@ func LoadCpu(b *Bus, d *Debug, cl *Clock) (*CPU, error) {
 }
 
 
-func (c *CPU) BusRead(a uint16) uint8 { return c.Bus.BusRead(a) }
-func (c *CPU) BusRead16(a uint16) uint16 { return c.Bus.BusRead16(a) }
-func (c *CPU) BusWrite(a uint16, v uint8) { c.Bus.BusWrite(a, v) }
-func (c *CPU) BusWrite16(a uint16, v uint16) { c.Bus.BusWrite16(a, v) }
+func (c *CPU) MMURead(a uint16) uint8 { return c.MMU.Read(a) }
+func (c *CPU) MMURead16(a uint16) uint16 { return c.MMU.Read16(a) }
+func (c *CPU) MMUWrite(a uint16, v uint8) { c.MMU.Write(a, v) }
+func (c *CPU) MMUWrite16(a uint16, v uint16) { c.MMU.Write16(a, v) }
 func (c *CPU) GetFlag(flag flagRegister) bool { return c.Register.f & (0x1 << flag) != 0 }
 func (c *CPU) UpdateClock(cycles int) {
 	changeTimer := c.Clock.Update(cycles)
 	if changeTimer {
-		c.Bus.RequestInterrupt(TIMER)
+		c.MMU.RequestInterrupt(TIMER)
 	}
 }
 
@@ -101,7 +101,7 @@ func (c *CPU) Step(f *os.File) (int, error) {
 		}
 
 		//Serial print
-		c.Debug.DebugUpdate(c.Bus)
+		c.Debug.DebugUpdate(c.MMU)
 
 		instructionCycles, err := c.ExecuteInstruction(instruction)
 		if err != nil{
@@ -110,7 +110,7 @@ func (c *CPU) Step(f *os.File) (int, error) {
 		cycles += instructionCycles
 	}else{
 		cycles += 1
-		if c.Bus.interruptorFlags != 0 {
+		if c.MMU.interruptorFlags != 0 {
 			c.Halted = false
 		}
 	}
@@ -126,7 +126,7 @@ func (c *CPU) Step(f *os.File) (int, error) {
 }
 
 func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
-	c.currentOpcode = c.BusRead(c.Register.pc)
+	c.currentOpcode = c.MMURead(c.Register.pc)
 	instruction, ok := instructions[c.currentOpcode]
 	if !ok {
 		return instruction, fmt.Errorf("opcode %x not implemented", c.currentOpcode)
@@ -136,10 +136,10 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	}
 	c.Register.pc += 1
 	if IsImmediateTarget8(instruction.Source) || IsImmediateTarget8(instruction.Destination) {
-		c.Immediate = uint16(c.BusRead(c.Register.pc))
+		c.Immediate = uint16(c.MMURead(c.Register.pc))
 		c.Register.pc += 1
 	} else if IsImmediateTarget16(instruction.Source) || IsImmediateTarget16(instruction.Destination) {
-		c.Immediate = c.BusRead16(c.Register.pc)
+		c.Immediate = c.MMURead16(c.Register.pc)
 		c.Register.pc += 2
 	}
 	return instruction, nil

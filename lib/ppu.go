@@ -37,7 +37,7 @@ type PPU struct {
 	mode PPUMode
 	pixelFetcher *PixelFetcher
 	Image *image.RGBA
-	Bus *Bus
+	MMU *MMU
 	//registers
 
 	oam  [40]Sprite
@@ -113,7 +113,7 @@ func (p *PPU) Update(cycles int) {
 			if p.dots == 456 {
 				p.ly++
 				if p.ly == p.lyc {
-					p.Bus.RequestInterrupt(LCDSATUS)
+					p.MMU.RequestInterrupt(LCDSATUS)
 				}
 				p.dots = 0
 				if p.ly < 144 {
@@ -128,7 +128,7 @@ func (p *PPU) Update(cycles int) {
 			if p.dots == 456 {
 				p.ly++
 				if p.ly == p.lyc {
-					p.Bus.RequestInterrupt(LCDSATUS)
+					p.MMU.RequestInterrupt(LCDSATUS)
 				}
 				if p.ly == 154 { //ppu has visited last line (153)
 					p.ly = 0
