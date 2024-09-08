@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type PPUMode  int
@@ -56,8 +54,10 @@ type PPU struct {
 func LoadPpu() (*PPU, error) {
 	//ppu initial values
 	p := new(PPU)
-	p.Image = image.NewRGBA(image.Rectangle{image.Point{0,0}, image.Point{160, 144}})
+	p.Image = image.NewRGBA(image.Rectangle{image.Point{0,0}, image.Point{160+128, 192}})
 	p.pixelFetcher = LoadPixelFetcher(p)
+
+	p.lcdControl = 0x91
 	return p, nil
 }
 
@@ -92,8 +92,8 @@ func (p *PPU) LcdWrite(a uint16, v uint8) {
 		case a == 0xFF46: 
 			panic(0) //dma write is processed elsewhere
 		case a == 0xFF47: p.bgp = v 
-		case a == 0xFF48: p.obp0 = v & 0xFC
-		case a == 0xFF49: p.obp1 = v & 0xFC
+		case a == 0xFF48: p.obp0 = v & 0b11111100
+		case a == 0xFF49: p.obp1 = v & 0b11111100
 		case a == 0xFF4A: p.wy = v
 		case a == 0xFF4B: p.wx = v
 		default:
@@ -209,8 +209,8 @@ func (p *PPU) oamwrite(a uint16, v uint8) {
 	}
 }
 
-func (p *PPU) DisplayTile(tile int, image *ebiten.Image, x int, y int) {
-	colors := []color.Color{color.White, color.Gray{0xAA}, color.Gray{0x55}, color.Black}
+func (p *PPU) DisplayTile(tile int, x int, y int) {
+	colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}}
 
 	var tileY int
 	for tileY = 0; tileY < 16; tileY += 2 {
@@ -223,7 +223,10 @@ func (p *PPU) DisplayTile(tile int, image *ebiten.Image, x int, y int) {
 			bit2 := (byte2 & (1 << tileX)) >> (tileX)
 
 			color := colors[(bit2<<1)|bit1]
-			image.Set(int(7-tileX+(x*8)), int((tileY/2))+(y*8), color)
+			//image.Set(int(7-tileX+(x*8)), int((tileY/2))+(y*8), color)		
+			//p.Image.SetRGBA(int(p.pixels), int(p.ly), colors[int(pixelData)])
+			//fmt.Println(int(7-tileX+(x*8)), int((tileY/2))+(y*8))
+			p.Image.SetRGBA(int(7-tileX+(x*8)), int((tileY/2))+(y*8), color)
 		}
 	}
 }

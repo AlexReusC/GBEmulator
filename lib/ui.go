@@ -14,25 +14,18 @@ type Screen struct {
 }
 
 func (s *Screen) Draw(screen *ebiten.Image) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(2, 2)
-	image := ebiten.NewImageFromImage(s.emulator.ppu.Image)
-	screen.DrawImage(image, op)
-
-
-/* 	image := ebiten.NewImage(600, 400)
 	var tileNum int = 0
-
 	for y := 0; y < 24; y++ {
 		for x := 0; x < 16; x++{
-			s.emulator.ppu.DisplayTile(tileNum, image, x+DebugScreenOffset, y)
+			s.emulator.ppu.DisplayTile(tileNum, x+DebugScreenOffset, y)
 			tileNum++
 		}
 	}
 	
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(2, 2)
-	screen.DrawImage(image, op) */
+	image := ebiten.NewImageFromImage(s.emulator.ppu.Image)
+	screen.DrawImage(image, op)
 }
 
 func (s *Screen) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
