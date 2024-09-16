@@ -126,5 +126,5 @@ func (m *MMU) GetIeRegister() uint8 { return m.ieRegister }
 func (m *MMU) SetIeRegister(ir uint8) { m.ieRegister = ir }
 
 func (m *MMU) RequestInterrupt(i InterruptorBit) {
-	m.interruptorFlags |= (1 << i)
+	m.interruptorFlags = SetBit(m.interruptorFlags, int(i))
 }

@@ -26,7 +26,7 @@ func (cpu *CPU) checkCond(ct conditional) (bool, error) {
 }
 
 func (c *CPU) SetFlag(flag flagRegister, cond bool) {
-	c.Register.f = SetBit(c.Register.f, flag, cond)
+	c.Register.f = SetBitWithCond(c.Register.f, flag, cond)
 }
 
 func (c *CPU) FormatFlag(f flagRegister, s rune) rune {

@@ -6,7 +6,7 @@ import (
 	"image/color"
 )
 
-type PPUMode  int
+type PPUMode uint8
 
 const (
 	priorityMask = 1 << 7
@@ -34,7 +34,6 @@ type Sprite struct {
 type PPU struct {
 	dots uint16
 	pixels uint16
-	mode PPUMode
 	pixelFetcher *PixelFetcher
 	Image *image.RGBA
 	MMU *MMU
@@ -101,38 +100,74 @@ func (p *PPU) LcdWrite(a uint16, v uint8) {
 	}
 }  
 
+func (p *PPU) GetLcdPpuEnable() bool { return BitIsSet(p.lcdControl, 7) }
+func (p *PPU) GetWindowMapArea() uint16 { if BitIsSet(p.lcdControl, 6) { return 0x1C00 } else { return 0x1800}  }
+func (p *PPU) GetWindowEnable() bool { return BitIsSet(p.lcdControl, 5) }
+func (p *PPU) GetBGWindowTileArea() uint16 { if BitIsSet(p.lcdControl, 4) { return 0 } else { return 0x0800 } }
+func (p *PPU) GetBGTileArea() uint16 { if BitIsSet(p.lcdControl, 3) { return 0x1C00 } else { return 0x1800 } }
+func (p *PPU) GetObjSize() bool { return BitIsSet(p.lcdControl, 2) }
+func (p *PPU) GetObjEnable() bool { return BitIsSet(p.lcdControl, 1) }
+func (p *PPU) GetBwObjEnable() bool { return BitIsSet(p.lcdControl, 0) }
+
+func (p *PPU) LycSourceSelected() bool { return BitIsSet(p.stat, 6) }
+func (p *PPU) OamSearchSourceSelected() bool { return BitIsSet(p.stat, 5) }
+func (p *PPU) VBlankSourceSelected() bool { return BitIsSet(p.stat, 4) }
+func (p *PPU) HBlankSourceSelected() bool { return BitIsSet(p.stat, 3) }
+func (p *PPU) SetLycLcEqual(c bool) { p.stat = SetBitWithCond(p.stat, 2, c) }
+func (p *PPU) GetMode() PPUMode { return PPUMode(p.stat & 0b11)}
+func (p *PPU) SetMode(m PPUMode) {
+	p.stat &= 0b11111100 
+	p.stat |= uint8(m)
+}
+
+
+
 func (p *PPU) GetColor() {
 	//TODO: palettes
 }
 
+func (p *PPU) UpdateLy() {
+	p.ly++
+
+	if p.ly == p.lyc {
+		p.SetLycLcEqual(true)
+		if p.LycSourceSelected() {
+			p.MMU.RequestInterrupt(LCDSATUS)
+		}
+	} else {
+		p.SetLycLcEqual(false)
+	}
+}
+
 func (p *PPU) Update(cycles int) {
-	switch p.mode {
+	switch p.GetMode() {
 		case HBlank:
 			p.dots++
 			//HBlank work
 			if p.dots == 456 {
-				p.ly++
-				if p.ly == p.lyc {
-					p.MMU.RequestInterrupt(LCDSATUS)
-				}
+				p.UpdateLy()
 				p.dots = 0
-				if p.ly < 144 {
-					p.mode = OamSearch
-				} else {
-					p.mode = VBlank
+				if p.ly < 144 { //rendered line
+					p.SetMode(OamSearch)
+					if p.OamSearchSourceSelected() {
+						p.MMU.RequestInterrupt(LCDSATUS)
+					}
+				} else { //not rendered line
+					p.SetMode(VBlank)
+					p.MMU.RequestInterrupt(VBLANK)
+					if p.VBlankSourceSelected() {
+						p.MMU.RequestInterrupt(LCDSATUS)
+					}
 				}
 			}
 		case VBlank:
 			p.dots++
 			//VBlank work here
 			if p.dots == 456 {
-				p.ly++
-				if p.ly == p.lyc {
-					p.MMU.RequestInterrupt(LCDSATUS)
-				}
+				p.UpdateLy()
 				if p.ly == 154 { //ppu has visited last line (153)
 					p.ly = 0
-					p.mode = OamSearch
+					p.SetMode(OamSearch)
 				}
 				p.dots = 0
 			}
@@ -140,14 +175,18 @@ func (p *PPU) Update(cycles int) {
 			//OamSearch work here
 			p.dots++
 			if p.dots == 80 {
-				p.mode = PixelTransfer
+				p.pixelFetcher.mode = ReadTileId
+				p.pixels = 0
+				p.pixelFetcher.lineX = 0
+				p.pixelFetcher.fetchX = 0
+				p.SetMode(PixelTransfer)
 			}
 		case PixelTransfer: 
 			//PixelTransfer work here
 			colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}}
 			p.dots++
 
-			index := (((p.pixels+uint16(p.scx)) / 8) + ((uint16(p.ly+p.scy) / 8) * 32))
+			index := ((p.pixels+uint16(p.scx)) / 8) + ((uint16(p.ly+p.scy) / 8) * 32)
 
 			p.pixelFetcher.Update(p.dots, index)
 
@@ -158,16 +197,23 @@ func (p *PPU) Update(cycles int) {
 			pixelData := p.pixelFetcher.queue[0]
 			p.pixelFetcher.queue = p.pixelFetcher.queue[1:]
 
-			p.Image.SetRGBA(int(p.pixels), int(p.ly), colors[int(pixelData)])
-			p.pixels++
+			if  p.pixelFetcher.lineX >= (p.scx % 8) {
+				p.Image.SetRGBA(int(p.pixels), int(p.ly), colors[int(pixelData)])
+				p.pixels++
+			}
+			p.pixelFetcher.lineX++
 
 			if p.pixels == 160 {
 				p.pixels = 0
-				p.mode = HBlank
-				p.pixelFetcher.queue = []uint8{}
+				p.SetMode(HBlank)
+				p.pixelFetcher.CleanPF()
+
+				if p.HBlankSourceSelected() {
+					p.MMU.RequestInterrupt(LCDSATUS)
+				}
 			}
 		default:
-			panic(fmt.Sprintf("unexpected ppu mode %d", p.mode))
+			panic(fmt.Sprintf("unexpected ppu mode %d", p.GetMode()))
 	}
 }
 

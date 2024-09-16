@@ -12,6 +12,8 @@ type Emulator struct {
 	file *os.File
 	ppu *PPU
 	mmu *MMU
+
+	cpuCycles int
 }
 
 func WithFile(f *os.File) func(e *Emulator) {
@@ -68,12 +70,16 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 }
 
 func (e *Emulator) Run() {
-	cycles, err := e.Cpu.Step(e.file)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if e.cpuCycles <= 0 {
+		cycles, err := e.Cpu.Step(e.file)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		e.Cpu.UpdateClock(cycles)
+		e.ppu.Update(cycles)
+		e.Cpu.HandleInterrupts()
+		e.cpuCycles += cycles
 	}
-	e.Cpu.UpdateClock(cycles)
-	e.ppu.Update(cycles)
-	e.Cpu.HandleInterrupts()
+	e.cpuCycles--
 }

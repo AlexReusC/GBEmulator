@@ -43,7 +43,7 @@ func RunGame(e *Emulator) {
 	ebiten.SetWindowSize(650, 400)
 	ebiten.SetWindowTitle("GBEmulator")
 
-	ebiten.SetTPS(60*80*4)
+	ebiten.SetTPS(240*80*4)
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)
 	}

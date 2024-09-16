@@ -20,19 +20,20 @@ func BitIsSet(n uint8, b uint8) bool {
 	return false
 }
 
-//TODO: Separate both functions, this is temporal
-
-func SetBit(b uint8, n int, c bool) uint8 {
+func SetBitWithCond(b uint8, n int, c bool) uint8 {
 	if c {
-		b |= (1 << n)
+		return (b | (1 << n))
 	} else {
-		b &= ^(1 << n)
+		return (b & ^(1 << n))
 	}
-	return b
+}
+
+func SetBit(b uint8, n int) uint8 {
+	return b | (1 << n)
 }
 
 func UnsetBit(b uint8, n int) uint8 {
-	return SetBit(b, n, false)
+	return b & ^(1 << n)
 }
 
 func IsImmediateTarget8(t target) bool {
