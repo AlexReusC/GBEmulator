@@ -134,6 +134,7 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	if f != nil {
 		DoctorLog(c, f)
 	}
+	//PrintLog(c, instruction)
 	c.Register.pc += 1
 	if IsImmediateTarget8(instruction.Source) || IsImmediateTarget8(instruction.Destination) {
 		c.Immediate = uint16(c.MMURead(c.Register.pc))

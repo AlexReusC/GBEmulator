@@ -17,7 +17,7 @@ func (s *Screen) Draw(screen *ebiten.Image) {
 	var tileNum int = 0
 	for y := 0; y < 24; y++ {
 		for x := 0; x < 16; x++{
-			s.emulator.ppu.DisplayTile(tileNum, x+DebugScreenOffset, y)
+			s.emulator.ppu.DebugDisplayTile(tileNum, x+DebugScreenOffset, y)
 			tileNum++
 		}
 	}

@@ -50,6 +50,14 @@ func Log(c *CPU, i Instruction, f *os.File) {
     }
 }
 
+func PrintLog(c *CPU, i Instruction) {
+	pcData := fmt.Sprintf("Pc: %x, (%02x %02x %02x) -> ", c.Register.pc, c.currentOpcode, c.MMURead(c.Register.pc+1), c.MMURead(c.Register.pc+2))
+	flags := fmt.Sprintf("%c%c%c%c", c.FormatFlag(flagZ, 'Z'), c.FormatFlag(flagN, 'N'), c.FormatFlag(flagH, 'H'), c.FormatFlag(flagC, 'C'))
+	output := fmt.Sprintf("%s Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x SP: %x \n", pcData, i.InstructionType, i.Destination, i.Source, c.Register.a, flags, c.Register.b, c.Register.c, c.Register.d, c.Register.e, c.Register.h, c.Register.l, c.Register.sp)
+
+	fmt.Print(output)
+}
+
 func DoctorLog(c *CPU, f *os.File) {
 	doctor := fmt.Sprintf("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n", c.Register.a, c.Register.f, c.Register.b, c.Register.c, c.Register.d, c.Register.e, c.Register.h, c.Register.l, c.Register.sp, c.Register.pc, c.MMURead(c.Register.pc), c.MMURead(c.Register.pc+1), c.MMURead(c.Register.pc+2), c.MMURead(c.Register.pc+3))
 	

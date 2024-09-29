@@ -82,11 +82,10 @@ func (m *MMU) Write(a uint16, v uint8) {
 	case a == 0xFF0F:
 		m.interruptorFlags = v
 	case a >= 0xFF40 && a <= 0xFF4B:
-		if a < 0xFF46{
-			m.ppu.LcdWrite(a, v)
-		} else {
+		if a == 0xFF46 {
 			m.DmaTransfer(v)
 		}
+		m.ppu.LcdWrite(a, v)
 	case a < 0xFF80:
 		//fmt.Println("address not implemented")
 	case a >= 0xFF80 && a < 0xFFFF: // High RAM
@@ -102,6 +101,7 @@ func (m *MMU) DmaTransfer(a uint8) {
 	realAddress := uint16(a) << 8
 	for i := uint16(0); i < 0xA0; i++ {
 		v := m.Read(realAddress + i)
+		//fmt.Printf("memory %x %x\n", realAddress + i, v)
 		m.ppu.oamwrite(0xFE00 + i, v)
 	}
 }

@@ -1,7 +1,5 @@
 package lib
 
-import "fmt"
-
 type InterruptorBit int
 
 const (
@@ -27,7 +25,7 @@ func (c *CPU) ProcessInterrupt(b InterruptorBit, address uint16) {
 	c.Register.sp -= 1
 	c.MMUWrite(c.Register.sp, uint8(c.Register.pc&0xFF))
 
-	fmt.Printf("Process %b \n", b)
+	//fmt.Printf("Process %b \n", b)
 	c.Register.pc = address
 }
 
@@ -52,5 +50,3 @@ func (c *CPU) HandleInterrupts() {
 		}
 	}
 }
-
-
