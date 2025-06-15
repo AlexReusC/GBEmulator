@@ -247,35 +247,7 @@ func (p *PPU) Update(cycles int) {
 				p.pixelFetcher.mode = ReadTileId
 			}
 		case PixelTransfer: 
-			p.dots++
-
-			index := ((p.pixels+uint16(p.scx)) / 8) + ((uint16(p.ly+p.scy) / 8) * 32)
-
-			p.pixelFetcher.Update(p.dots, index)
-
-			if len(p.pixelFetcher.PixelQueue) <= 8 {
-				return
-			}
-
-			//pop data
-			pixelData := p.pixelFetcher.PixelQueue[0]
-			p.pixelFetcher.PixelQueue = p.pixelFetcher.PixelQueue[1:]
-
-			if  p.pixelFetcher.lineX >= (p.scx % 8) {
-				p.Image.SetRGBA(int(p.pixels), int(p.ly), p.GetColor(pixelData.color, pixelData.palette))
-				p.pixels++
-			}
-			p.pixelFetcher.lineX++
-
-			if p.pixels == 160 {
-				p.pixels = 0
-				p.SetMode(HBlank)
-				p.pixelFetcher.CleanPF()
-
-				if p.HBlankSourceSelected() {
-					p.MMU.RequestInterrupt(LCDSATUS)
-				}
-			}
+			p.SetMode(HBlank)
 		default:
 			panic(fmt.Sprintf("unexpected ppu mode %d", p.GetMode()))
 	}
