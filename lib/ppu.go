@@ -46,7 +46,6 @@ const (
 type PPU struct {
 	dots uint16
 	pixels uint16 // x pos in screen
-	pixelFetcher *PixelFetcher
 	Image *image.RGBA
 	MMU *MMU
 	sprites []Sprite
@@ -68,7 +67,6 @@ func LoadPpu() (*PPU, error) {
 	//ppu initial values
 	p := new(PPU)
 	p.Image = image.NewRGBA(image.Rectangle{image.Point{0,0}, image.Point{160+128, 192}})
-	p.pixelFetcher = LoadPixelFetcher(p)
 
 	p.lcdControl = 0x91
 	p.bgp = 0xFC
@@ -240,11 +238,8 @@ func (p *PPU) Update(cycles int) {
 			if p.dots == 80 {
 
 				p.pixels = 0
-				p.pixelFetcher.lineX = 0
-				p.pixelFetcher.fetchX = 0
 				p.SetMode(PixelTransfer)
 				p.GetSpritesInLine()
-				p.pixelFetcher.mode = ReadTileId
 			}
 		case PixelTransfer: 
 			p.SetMode(HBlank)
