@@ -64,65 +64,65 @@ func (c *CPU) GetTargetHL() uint16 {
 //TODO: remove isAddress info
 /*Function for getting the target value dynamically
 */
-func (c *CPU) GetTarget(t target) (Data, error) {
+func (c *CPU) GetTarget(t target) (uint16, error) {
 	switch t {
 	case A:
-		return Data{uint16(c.Register.a), false}, nil
+		return uint16(c.Register.a), nil
 	case B:
-		return Data{uint16(c.Register.b), false}, nil
+		return uint16(c.Register.b), nil
 	case C:
-		return Data{uint16(c.Register.c), false}, nil
+		return uint16(c.Register.c), nil
 	case D:
-		return Data{uint16(c.Register.d), false}, nil
+		return uint16(c.Register.d), nil
 	case E:
-		return Data{uint16(c.Register.e), false}, nil
+		return uint16(c.Register.e), nil
 	case F:
-		return Data{uint16(c.Register.f), false}, nil
+		return uint16(c.Register.f), nil
 	case H:
-		return Data{uint16(c.Register.h), false}, nil
+		return uint16(c.Register.h), nil
 	case L:
-		return Data{uint16(c.Register.l), false}, nil
+		return uint16(c.Register.l), nil
 	case SPe8:
 		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.Immediate)))) 
-		return Data{val, false}, nil
+		return val, nil
 	case AF:
-		return Data{c.GetTargetAF(), false}, nil
+		return c.GetTargetAF(), nil
 	case BC:
-		return Data{c.GetTargetBC(), false}, nil
+		return c.GetTargetBC(), nil
 	case DE:
-		return Data{c.GetTargetDE(), false}, nil
+		return c.GetTargetDE(), nil
 	case HL:
-		return Data{c.GetTargetHL(), false}, nil
+		return  c.GetTargetHL(), nil
 	case SP:
-		return Data{c.Register.sp, false}, nil
+		return c.Register.sp, nil
 	case n:
-		return Data{c.Immediate, false}, nil
+		return c.Immediate, nil
 	case nn:
-		return Data{c.Immediate, false}, nil
+		return c.Immediate, nil
 	case C_M:
-		return Data{uint16(c.Register.c), true}, nil
+		return uint16(c.Register.c), nil
 	case BC_M:
-		return Data{c.GetTargetBC(), true}, nil
+		return c.GetTargetBC(), nil
 	case DE_M:
-		return Data{c.GetTargetDE(), true}, nil
+		return c.GetTargetDE(), nil
 	case HL_M:
-		return Data{c.GetTargetHL(), true}, nil
+		return c.GetTargetHL(), nil
 	case HLP_M:
 		val := c.GetTargetHL()
 		c.SetTarget(HL, val+1)
-		return Data{val, true}, nil
+		return val, nil
 	case HLM_M:
 		val := c.GetTargetHL()
 		c.SetTarget(HL, val-1)
-		return Data{val, true}, nil
+		return val, nil
 	case n_M:
-		return Data{c.Immediate, true}, nil
+		return c.Immediate, nil
 	case nn_M:
-		return Data{c.Immediate, true}, nil
+		return c.Immediate, nil
 	case None:
-		return Data{0, false}, nil
+		return 0, nil
 	default:
-		return Data{0, false}, errors.New("unknown target type")
+		return 0, errors.New("unknown target type")
 	}
 }
 

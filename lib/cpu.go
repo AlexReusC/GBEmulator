@@ -27,11 +27,6 @@ type registers struct {
 	pc uint16
 }
 
-type Data struct {
-	Value uint16
-	IsAddr bool
-}
-
 type CPU struct {
 	Register registers
 	MMU *MMU
@@ -40,7 +35,7 @@ type CPU struct {
 
 	Halted bool
 
-	Source Data
+	Source uint16
 	SourceTarget target
 	DestinationTarget target
 	Immediate uint16
@@ -108,12 +103,12 @@ func (c *CPU) Step(f *os.File) (int, error) {
 			return 0, err
 		}
 		cycles += instructionCycles
-	}else{
-		cycles += 1
-		if c.MMU.interruptorFlags != 0 {
-			c.Halted = false
+		} else {
+			cycles += 1
+			if c.MMU.interruptorFlags != 0 {
+				c.Halted = false
+			}
 		}
-	}
 
 	//Manage EI instruction
 	if c.EnableMasterInterruptAfter > 0 {
@@ -147,8 +142,7 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 }
 
 func (c *CPU) DecodeInstruction(instruction Instruction) error{
-		//Get destination
-		c.DestinationTarget = instruction.Destination
+		c.DestinationTarget, c.SourceTarget = instruction.Destination, instruction.Source
 		
 		//Get source
 		data, err := c.GetTarget(instruction.Source)
@@ -156,7 +150,6 @@ func (c *CPU) DecodeInstruction(instruction Instruction) error{
 			return err
 		}
 		c.Source = data
-		c.SourceTarget = instruction.Source
 
 		//Conditional mode
 		currentCondition := instruction.ConditionType
