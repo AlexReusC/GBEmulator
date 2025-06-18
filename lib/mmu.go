@@ -48,7 +48,6 @@ func (m *MMU) Read(a uint16) uint8 {
 	case a == 0xFF4D:
 		return 0xFF
 	case a < 0xFF80:
-		//fmt.Println("address not implemented")
 		return 0
 	case a < 0xFFFF: // High RAM
 		return m.HramRead(a)
@@ -87,7 +86,6 @@ func (m *MMU) Write(a uint16, v uint8) {
 		}
 		m.ppu.LcdWrite(a, v)
 	case a < 0xFF80:
-		//fmt.Println("address not implemented")
 	case a >= 0xFF80 && a < 0xFFFF: // High RAM
 		m.HramWrite(a, v)
 	case a == 0xFFFF: // CPU enable registerr

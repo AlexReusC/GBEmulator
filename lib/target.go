@@ -61,7 +61,6 @@ func (c *CPU) GetTargetHL() uint16 {
 	return (hi<<8 | lo)
 }
 
-//TODO: remove isAddress info
 /*Function for getting the target value dynamically
 */
 func (c *CPU) GetTarget(t target) (uint16, error) {
