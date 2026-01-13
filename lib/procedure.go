@@ -1,29 +1,7 @@
 package lib
 
-import (
-	"slices"
-)
-
-func Isr8(t target) bool {
-	var r8 = []target {A, B, C, D, E, F, H, L}
-	return slices.Contains(r8, t)
-}
-
-func IsPointer(t target) bool {
-	var pt = []target {C_M, BC_M, DE_M, HL_M, HLP_M, HLM_M, n_M, nn_M, nn_M16 }
-	return slices.Contains(pt, t)
-}
-
-var rstAddress = map[uint8]uint16{
-		0xC7: 0x00,
-		0xD7: 0x10,
-		0xE7: 0x20,
-		0xF7: 0x30,
-		0xCF: 0x08,
-		0xDF: 0x18,
-		0xEF: 0x28,
-		0xFF: 0x38,
-}
+// This code are all logic for instructions but independent of opcodes. It tries to group all of the registers and constants
+// on the same function (for the most part). Conditional modes are handled from the CPU
 
 func (c *CPU) Nop() int {
 	return 1
@@ -43,7 +21,7 @@ func (c *CPU) Jp() int {
 
 func (c *CPU) Jr() int {
 	if c.CurrentConditionResult {
-		c.Register.pc = uint16(int16(c.Register.pc) + int16(int8(c.Source))) 
+		c.Register.pc = uint16(int16(c.Register.pc) + int16(int8(c.Source)))
 		return 3
 	}
 	return 2
@@ -58,10 +36,10 @@ func (c *CPU) Ld8() int {
 	} else {
 		input = uint8(c.Source)
 	}
-	
+
 	c.SetTarget(c.DestinationTarget, uint16(input))
 
-	if IsPointer(c.SourceTarget) || IsPointer(c.DestinationTarget){
+	if IsPointer(c.SourceTarget) || IsPointer(c.DestinationTarget) {
 		cycles += 1
 	}
 	if c.SourceTarget == nn_M || c.DestinationTarget == nn_M {
@@ -85,12 +63,12 @@ func (c *CPU) Ld16() int {
 		cycles += 1
 	}
 	if c.DestinationTarget == nn_M16 {
-		cycles += 4	
+		cycles += 4
 	}
 	return cycles
 }
 
-//Ld hl, SP+e8
+// Ld hl, SP+e8
 func (c *CPU) LdSPn() int {
 	input8 := c.Source
 	input16 := c.Register.sp
@@ -100,8 +78,8 @@ func (c *CPU) LdSPn() int {
 
 	c.SetFlag(flagZ, false)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (input16 & 0x0F) + (input8 & 0x0F) > 0x0F)
-	c.SetFlag(flagC, (input16 & 0xFF) + (input8 & 0xFF) > 0xFF)
+	c.SetFlag(flagH, (input16&0x0F)+(input8&0x0F) > 0x0F)
+	c.SetFlag(flagC, (input16&0xFF)+(input8&0xFF) > 0xFF)
 	return 3
 }
 
@@ -135,9 +113,9 @@ func (c *CPU) Push() int {
 
 func (c *CPU) Pop() int {
 	lo := uint16(c.MMURead(c.Register.sp))
-	hi := uint16(c.MMURead(c.Register.sp+1))
+	hi := uint16(c.MMURead(c.Register.sp + 1))
 	c.Register.sp += 2
-	result := (hi<<8)|lo
+	result := (hi << 8) | lo
 
 	if c.DestinationTarget == AF { //clear lower nibble of F (always have to be zero)
 		result = result & 0xFFF0
@@ -200,6 +178,18 @@ func (c *CPU) Reti() int {
 }
 
 func (c *CPU) Rst() int {
+
+	var rstAddress = map[uint8]uint16{
+		0xC7: 0x00,
+		0xD7: 0x10,
+		0xE7: 0x20,
+		0xF7: 0x30,
+		0xCF: 0x08,
+		0xDF: 0x18,
+		0xEF: 0x28,
+		0xFF: 0x38,
+	}
+
 	c.Register.sp -= 1
 	c.MMUWrite(c.Register.sp, uint8((c.Register.pc&0xFF00)>>8))
 	c.Register.sp -= 1
@@ -212,7 +202,7 @@ func (c *CPU) Rst() int {
 
 func (c *CPU) Di() int {
 	c.MasterInterruptEnabled = false
-	
+
 	return 1
 }
 
@@ -227,17 +217,17 @@ func (c *CPU) Halt() int {
 	return 0
 }
 
-//Decimal Adjust Accumulator
-//https://blog.ollien.com/posts/gb-daa/
+// Decimal Adjust Accumulator
+// https://blog.ollien.com/posts/gb-daa/
 func (c *CPU) Daa() int {
 	result := c.Register.a
 	var offset uint8 = 0
-	
-	if c.GetFlag(flagH) || (!c.GetFlag(flagN) && (result & 0x0F) > 0x09){
+
+	if c.GetFlag(flagH) || (!c.GetFlag(flagN) && (result&0x0F) > 0x09) {
 		offset |= 0x06
 	}
 
-	if c.GetFlag(flagC) || (!c.GetFlag(flagN) && result > 0x99){
+	if c.GetFlag(flagC) || (!c.GetFlag(flagN) && result > 0x99) {
 		offset |= 0x60
 		c.SetFlag(flagC, true)
 	} else {
@@ -256,12 +246,12 @@ func (c *CPU) Daa() int {
 	return 1
 }
 
-//Rotate left A reg
+// Rotate left A reg
 func (c *CPU) Rlca() int {
 	msbOn := c.Register.a & 0x80 //128
 	modifiedVal := c.Register.a << 1
-	if(msbOn != 0){
-		 modifiedVal |= 0x1
+	if msbOn != 0 {
+		modifiedVal |= 0x1
 	}
 	c.SetTarget(A, uint16(modifiedVal))
 
@@ -272,11 +262,11 @@ func (c *CPU) Rlca() int {
 	return 1
 }
 
-//Rotate right A reg
+// Rotate right A reg
 func (c *CPU) Rrca() int {
 	lsbOn := c.Register.a & 0x01
 	modifiedVal := c.Register.a >> 1
-	if(lsbOn != 0){
+	if lsbOn != 0 {
 		modifiedVal |= 0x80
 	}
 	c.SetTarget(A, uint16(modifiedVal))
@@ -288,11 +278,11 @@ func (c *CPU) Rrca() int {
 	return 1
 }
 
-//Rotate left A reg, through carry
+// Rotate left A reg, through carry
 func (c *CPU) Rla() int {
 	msbOn := c.Register.a & 0x80
 	modifiedVal := c.Register.a << 1
-	if (c.GetFlag(flagC)){
+	if c.GetFlag(flagC) {
 		modifiedVal |= 0x01
 	}
 	c.SetTarget(A, uint16(modifiedVal))
@@ -304,15 +294,15 @@ func (c *CPU) Rla() int {
 	return 1
 }
 
-//Rotate right A reg, through carry
+// Rotate right A reg, through carry
 func (c *CPU) Rra() int {
 	lsbOn := c.Register.a & 0x01
 	modifiedVal := c.Register.a >> 1
-	if (c.GetFlag(flagC)){
+	if c.GetFlag(flagC) {
 		modifiedVal |= 0x80
 	}
 	c.SetTarget(A, uint16(modifiedVal))
-	
+
 	c.SetFlag(flagZ, false)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
@@ -320,17 +310,17 @@ func (c *CPU) Rra() int {
 	return 1
 }
 
-//Complement accumulator
+// Complement accumulator
 func (c *CPU) Cpl() int {
 	modifiedVal := ^c.Register.a
 	c.SetTarget(A, uint16(modifiedVal))
-	
+
 	c.SetFlag(flagN, true)
 	c.SetFlag(flagH, true)
 	return 1
 }
 
-//Complement carry flag
+// Complement carry flag
 func (c *CPU) Ccf() int {
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
@@ -338,7 +328,7 @@ func (c *CPU) Ccf() int {
 	return 1
 }
 
-//Set Carry Flag
+// Set Carry Flag
 func (c *CPU) Scf() int {
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
@@ -346,7 +336,7 @@ func (c *CPU) Scf() int {
 	return 1
 }
 
-//add uin16 or uint8
+// add uin16 or uint8
 func (c *CPU) Inc() int {
 	input := c.Source
 	if IsPointer(c.SourceTarget) {
@@ -355,13 +345,13 @@ func (c *CPU) Inc() int {
 	result := input + 1
 	c.SetTarget(c.SourceTarget, result)
 
-	if (c.currentOpcode & 0x03) != 0x03{
-		c.SetFlag(flagZ, 0xFF & result == 0)
+	if (c.currentOpcode & 0x03) != 0x03 {
+		c.SetFlag(flagZ, 0xFF&result == 0)
 		c.SetFlag(flagN, false)
-		c.SetFlag(flagH, (input & 0x0F) + 0x01 == 0x10 )
+		c.SetFlag(flagH, (input&0x0F)+0x01 == 0x10)
 	}
 
-	if Isr8(c.SourceTarget){
+	if Isr8(c.SourceTarget) {
 		return 1
 	} else if c.SourceTarget == HL_M {
 		return 3
@@ -377,13 +367,13 @@ func (c *CPU) Dec() int {
 	result := input - 1
 	c.SetTarget(c.SourceTarget, result)
 
-	if (c.currentOpcode & 0x0B) != 0x0B{
-		c.SetFlag(flagZ, 0xFF & result == 0)
+	if (c.currentOpcode & 0x0B) != 0x0B {
+		c.SetFlag(flagZ, 0xFF&result == 0)
 		c.SetFlag(flagN, true)
-		c.SetFlag(flagH, (input & 0x0F) == 0x00 ) //4 trailing zeroes
+		c.SetFlag(flagH, (input&0x0F) == 0x00) //4 trailing zeroes
 	}
-	
-	if Isr8(c.SourceTarget){
+
+	if Isr8(c.SourceTarget) {
 		return 1
 	} else if c.SourceTarget == HL_M {
 		return 3
@@ -404,8 +394,8 @@ func (c *CPU) Add() int {
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (a & 0x0F) + (input & 0x0F) > 0x0F)
-	c.SetFlag(flagC, input > 0xFF - a)
+	c.SetFlag(flagH, (a&0x0F)+(input&0x0F) > 0x0F)
+	c.SetFlag(flagC, input > 0xFF-a)
 
 	if Isr8(c.SourceTarget) {
 		return 1
@@ -413,7 +403,7 @@ func (c *CPU) Add() int {
 	return 2 //Add a,[HL] & Add A, n8
 }
 
-//Add Hl, SP & Add Hl, r16
+// Add Hl, SP & Add Hl, r16
 func (c *CPU) AddHl() int {
 	hl := c.GetTargetHL()
 	input := c.Source
@@ -421,12 +411,12 @@ func (c *CPU) AddHl() int {
 	c.SetTarget(HL, result)
 
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (hl & 0x0FFF) + (input & 0x0FFF) > 0x0FFF)
-	c.SetFlag(flagC, input > 0xFFFF - hl)
+	c.SetFlag(flagH, (hl&0x0FFF)+(input&0x0FFF) > 0x0FFF)
+	c.SetFlag(flagC, input > 0xFFFF-hl)
 	return 2
 }
 
-//Add Sp, e8
+// Add Sp, e8
 func (c *CPU) Add16_8() int {
 	input16 := c.Register.sp
 	input8 := c.Source
@@ -435,8 +425,8 @@ func (c *CPU) Add16_8() int {
 
 	c.SetFlag(flagZ, false)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (input16 & 0x0F) + (input8 & 0x0F) > 0x0F)
-	c.SetFlag(flagC, (input16 & 0xFF) + (input8 & 0xFF) > 0xFF)
+	c.SetFlag(flagH, (input16&0x0F)+(input8&0x0F) > 0x0F)
+	c.SetFlag(flagC, (input16&0xFF)+(input8&0xFF) > 0xFF)
 	return 4
 }
 
@@ -455,8 +445,8 @@ func (c *CPU) Adc() int {
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, false)
-	c.SetFlag(flagH, (a & 0x0F) + (input & 0x0F) + carryBit > 0x0F)
-	c.SetFlag(flagC, int(input) > 0xFF - int(a) - int(carryBit))
+	c.SetFlag(flagH, (a&0x0F)+(input&0x0F)+carryBit > 0x0F)
+	c.SetFlag(flagC, int(input) > 0xFF-int(a)-int(carryBit))
 	if Isr8(c.SourceTarget) {
 		return 1
 	}
@@ -476,7 +466,7 @@ func (c *CPU) Sub() int {
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, (a & 0x0F) < (input & 0x0F))
+	c.SetFlag(flagH, (a&0x0F) < (input&0x0F))
 	c.SetFlag(flagC, input > a)
 
 	if Isr8(c.SourceTarget) {
@@ -500,8 +490,8 @@ func (c *CPU) Sbc() int {
 
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, (a & 0x0F) < ((input & 0x0F) + carryBit))
-	c.SetFlag(flagC, int(input) + int(carryBit) > int(a))
+	c.SetFlag(flagH, (a&0x0F) < ((input&0x0F)+carryBit))
+	c.SetFlag(flagC, int(input)+int(carryBit) > int(a))
 
 	if Isr8(c.SourceTarget) {
 		return 1
@@ -516,7 +506,7 @@ func (c *CPU) And() int {
 	} else {
 		input = uint8(c.Source)
 	}
-	result := uint16(c.Register.a & input) 
+	result := uint16(c.Register.a & input)
 	c.SetTarget(A, result)
 
 	c.SetFlag(flagZ, result == 0)
@@ -530,7 +520,6 @@ func (c *CPU) And() int {
 	return 2 //And a,[HL] & And A, n8
 }
 
-
 func (c *CPU) Xor() int {
 	var input uint8
 	if IsPointer(c.SourceTarget) {
@@ -538,7 +527,7 @@ func (c *CPU) Xor() int {
 	} else {
 		input = uint8(c.Source)
 	}
-	result := uint16(c.Register.a ^ input) 
+	result := uint16(c.Register.a ^ input)
 	c.SetTarget(A, result)
 
 	c.SetFlag(flagZ, result == 0)
@@ -559,7 +548,7 @@ func (c *CPU) Or() int {
 	} else {
 		input = uint8(c.Source)
 	}
-	result := uint16(c.Register.a | input) 
+	result := uint16(c.Register.a | input)
 	c.SetTarget(A, result)
 
 	c.SetFlag(flagZ, result == 0)
@@ -573,7 +562,6 @@ func (c *CPU) Or() int {
 	return 2 //Or a,[HL] & Or A, n8
 }
 
-
 func (c *CPU) Cp() int {
 	var input uint8
 	if IsPointer(c.SourceTarget) {
@@ -582,11 +570,11 @@ func (c *CPU) Cp() int {
 		input = uint8(c.Source)
 	}
 	a := c.Register.a
-	result := uint16(a - input) 
-	
+	result := uint16(a - input)
+
 	c.SetFlag(flagZ, result == 0)
 	c.SetFlag(flagN, true)
-	c.SetFlag(flagH, (a & 0x0F) < (input & 0x0F))
+	c.SetFlag(flagH, (a&0x0F) < (input&0x0F))
 	c.SetFlag(flagC, input > a)
 
 	if Isr8(c.SourceTarget) {
@@ -595,17 +583,17 @@ func (c *CPU) Cp() int {
 	return 2 //Cp a,[HL] & Cp A, n8
 }
 
-//Rotate Regiser Left
+// Rotate Regiser Left
 func (c *CPU) Rlc(input uint16, t target) int {
 	msbOn := input & 0x80 //128
 	result := input << 1
-	if(msbOn != 0){
-		 result |= 0x1
+	if msbOn != 0 {
+		result |= 0x1
 	}
 	c.SetTarget(t, result)
-	
+
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
 
@@ -615,17 +603,17 @@ func (c *CPU) Rlc(input uint16, t target) int {
 	return 4 //Rlc [hl]
 }
 
-//Rotate Regiser Right
+// Rotate Regiser Right
 func (c *CPU) Rrc(input uint16, t target) int {
 	lsbOn := input & 0x01
 	result := input >> 1
-	if(lsbOn != 0){
+	if lsbOn != 0 {
 		result |= 0x80
 	}
 	c.SetTarget(t, result)
-	
+
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
 
@@ -635,17 +623,17 @@ func (c *CPU) Rrc(input uint16, t target) int {
 	return 4 //Rrc [hl]
 }
 
-//Rotate r Left, through carry
+// Rotate r Left, through carry
 func (c *CPU) Rl(input uint16, t target) int {
 	msbOn := input & 0x80
 	result := input << 1
-	if (c.GetFlag(flagC)){
+	if c.GetFlag(flagC) {
 		result |= 0x01
 	}
 	c.SetTarget(t, result)
-	
-	c.SetFlag(flagZ, (result & 0xFF) == 0)
-	c.SetFlag(flagN, false) 
+
+	c.SetFlag(flagZ, (result&0xFF) == 0)
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
 
@@ -655,17 +643,17 @@ func (c *CPU) Rl(input uint16, t target) int {
 	return 4 //Rl [hl]
 }
 
-//Rotate r right, through carry
+// Rotate r right, through carry
 func (c *CPU) Rr(input uint16, t target) int {
 	lsbOn := input & 0x01
 	result := input >> 1
-	if (c.GetFlag(flagC)){
+	if c.GetFlag(flagC) {
 		result |= 0x80
 	}
 	c.SetTarget(t, result)
-	
+
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
 
@@ -675,14 +663,14 @@ func (c *CPU) Rr(input uint16, t target) int {
 	return 4 //Rr [hl]
 }
 
-//Shift Left Arithmetically
+// Shift Left Arithmetically
 func (c *CPU) Sla(input uint16, t target) int {
 	msbOn := input & 0x80
 	result := input << 1
 	c.SetTarget(t, result)
-	
-	c.SetFlag(flagZ, (result & 0xFF) == 0)
-	c.SetFlag(flagN, false) 
+
+	c.SetFlag(flagZ, (result&0xFF) == 0)
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
 
@@ -692,7 +680,7 @@ func (c *CPU) Sla(input uint16, t target) int {
 	return 4 //Sla [hl]
 }
 
-//Shift Right Arithmetically
+// Shift Right Arithmetically
 func (c *CPU) Sra(input uint16, t target) int {
 	msbOn := input & 0x80
 	lsbOn := input & 0x01
@@ -700,7 +688,7 @@ func (c *CPU) Sra(input uint16, t target) int {
 	c.SetTarget(t, result)
 
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
 
@@ -715,7 +703,7 @@ func (c *CPU) Swap(input uint16, t target) int {
 	c.SetTarget(t, result)
 
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, false)
 
@@ -732,7 +720,7 @@ func (c *CPU) Srl(input uint16, t target) int {
 	c.SetTarget(t, result)
 
 	c.SetFlag(flagZ, result == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
 
@@ -743,8 +731,8 @@ func (c *CPU) Srl(input uint16, t target) int {
 }
 
 func (c *CPU) Bit(input uint16, t target, b uint8) int {
-	c.SetFlag(flagZ, input & (1 << b) == 0)
-	c.SetFlag(flagN, false) 
+	c.SetFlag(flagZ, input&(1<<b) == 0)
+	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, true)
 
 	if Isr8(t) {
@@ -779,7 +767,7 @@ func (c *CPU) Cb() (int, error) {
 	instruction := cbOpcodes[op]
 
 	data, err := c.GetTarget(instruction.Register)
-	if err != nil{ 
+	if err != nil {
 		return 0, err
 	}
 
@@ -788,29 +776,29 @@ func (c *CPU) Cb() (int, error) {
 		input = uint16(c.MMURead(data))
 	}
 
-	switch instruction.Instruction{
-		case Rlc:
-			cycles += c.Rlc(input, instruction.Register)
-		case Rrc:
-			cycles += c.Rrc(input, instruction.Register)
-		case Rl:
-			cycles += c.Rl(input, instruction.Register)
-		case Rr:
-			cycles += c.Rr(input, instruction.Register)
-		case Sla:
-			cycles += c.Sla(input, instruction.Register)
-		case Sra:
-			cycles += c.Sra(input, instruction.Register)	
-		case Swap:
-			cycles += c.Swap(input, instruction.Register)
-		case Srl:
-			cycles += c.Srl(input, instruction.Register)
-		case Bit:
-			cycles += c.Bit(input, instruction.Register ,instruction.Bit)
-		case Res:
-			cycles += c.Res(input, instruction.Register, instruction.Bit)
-		case Set:
-			cycles += c.Set(input, instruction.Register, instruction.Bit)
+	switch instruction.Instruction {
+	case Rlc:
+		cycles += c.Rlc(input, instruction.Register)
+	case Rrc:
+		cycles += c.Rrc(input, instruction.Register)
+	case Rl:
+		cycles += c.Rl(input, instruction.Register)
+	case Rr:
+		cycles += c.Rr(input, instruction.Register)
+	case Sla:
+		cycles += c.Sla(input, instruction.Register)
+	case Sra:
+		cycles += c.Sra(input, instruction.Register)
+	case Swap:
+		cycles += c.Swap(input, instruction.Register)
+	case Srl:
+		cycles += c.Srl(input, instruction.Register)
+	case Bit:
+		cycles += c.Bit(input, instruction.Register, instruction.Bit)
+	case Res:
+		cycles += c.Res(input, instruction.Register, instruction.Bit)
+	case Set:
+		cycles += c.Set(input, instruction.Register, instruction.Bit)
 	}
 
 	return cycles, nil

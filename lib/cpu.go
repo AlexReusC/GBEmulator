@@ -8,10 +8,10 @@ import (
 type flagRegister = int
 
 const (
-	flagZ 	flagRegister 	= 7 	//zero flag 				-> bit 7
-	flagN 	flagRegister	= 6 	//substraction flag (BCD) 	-> bit 6
-	flagH 	flagRegister	= 5 	//half carry flag (BCD) 	-> bit 5
-	flagC	flagRegister	= 4		//carry clag				-> bit 4
+	flagZ flagRegister = 7 //zero flag 				-> bit 7
+	flagN flagRegister = 6 //substraction flag (BCD) 	-> bit 6
+	flagH flagRegister = 5 //half carry flag (BCD) 	-> bit 5
+	flagC flagRegister = 4 //carry clag				-> bit 4
 )
 
 type registers struct {
@@ -29,39 +29,39 @@ type registers struct {
 
 type CPU struct {
 	Register registers
-	MMU *MMU
-	Debug *Debug
-	Clock *Clock
+	MMU      *MMU
+	Debug    *Debug
+	Clock    *Clock
 
 	Halted bool
 
-	Source uint16
-	SourceTarget target
-	DestinationTarget target
-	Immediate uint16
+	Source                 uint16
+	SourceTarget           target
+	DestinationTarget      target
+	Immediate              uint16
 	CurrentConditionResult bool
-	currentOpcode uint8
+	currentOpcode          uint8
 
-	MasterInterruptEnabled bool
+	MasterInterruptEnabled     bool
 	EnableMasterInterruptAfter int
-	Interrupts uint8
+	Interrupts                 uint8
 }
 
 func LoadCpu(m *MMU, d *Debug, cl *Clock) (*CPU, error) {
 	c := &CPU{
 		Register: registers{
-			a: 	0x01,
-			b: 	0x00,
-			c: 	0x13, 
-			d:	0x00, 
-			e: 	0xD8, 
-			h:	0x01, 
-			l:	0x4D, 
-			f: 	0xB0, 
-			pc: 0x0100, 
+			a:  0x01,
+			b:  0x00,
+			c:  0x13,
+			d:  0x00,
+			e:  0xD8,
+			h:  0x01,
+			l:  0x4D,
+			f:  0xB0,
+			pc: 0x0100,
 			sp: 0xFFFE,
-			}, 
-		MMU: m, 
+		},
+		MMU:   m,
 		Debug: d,
 		Clock: cl,
 	}
@@ -69,12 +69,11 @@ func LoadCpu(m *MMU, d *Debug, cl *Clock) (*CPU, error) {
 	return c, nil
 }
 
-
-func (c *CPU) MMURead(a uint16) uint8 { return c.MMU.Read(a) }
-func (c *CPU) MMURead16(a uint16) uint16 { return c.MMU.Read16(a) }
-func (c *CPU) MMUWrite(a uint16, v uint8) { c.MMU.Write(a, v) }
-func (c *CPU) MMUWrite16(a uint16, v uint16) { c.MMU.Write16(a, v) }
-func (c *CPU) GetFlag(flag flagRegister) bool { return c.Register.f & (0x1 << flag) != 0 }
+func (c *CPU) MMURead(a uint16) uint8         { return c.MMU.Read(a) }
+func (c *CPU) MMURead16(a uint16) uint16      { return c.MMU.Read16(a) }
+func (c *CPU) MMUWrite(a uint16, v uint8)     { c.MMU.Write(a, v) }
+func (c *CPU) MMUWrite16(a uint16, v uint16)  { c.MMU.Write16(a, v) }
+func (c *CPU) GetFlag(flag flagRegister) bool { return c.Register.f&(0x1<<flag) != 0 }
 func (c *CPU) UpdateClock(cycles int) {
 	changeTimer := c.Clock.Update(cycles)
 	if changeTimer {
@@ -82,16 +81,17 @@ func (c *CPU) UpdateClock(cycles int) {
 	}
 }
 
+// Main step of the CPU, divided in fetch, decode and execute
 func (c *CPU) Step(f *os.File) (int, error) {
 	cycles := 0
 	if !c.Halted {
 		instruction, err := c.FetchInstruction(f)
-		if err != nil{
+		if err != nil {
 			return 0, err
 		}
 
 		err = c.DecodeInstruction(instruction)
-		if err != nil{
+		if err != nil {
 			return 0, err
 		}
 
@@ -99,16 +99,16 @@ func (c *CPU) Step(f *os.File) (int, error) {
 		c.Debug.DebugUpdate(c.MMU)
 
 		instructionCycles, err := c.ExecuteInstruction(instruction)
-		if err != nil{
+		if err != nil {
 			return 0, err
 		}
 		cycles += instructionCycles
-		} else {
-			cycles += 1
-			if c.MMU.interruptorFlags != 0 {
-				c.Halted = false
-			}
+	} else {
+		cycles += 1
+		if c.MMU.interruptorFlags != 0 {
+			c.Halted = false
 		}
+	}
 
 	//Manage EI instruction
 	if c.EnableMasterInterruptAfter > 0 {
@@ -129,7 +129,6 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	if f != nil {
 		DoctorLog(c, f)
 	}
-	//PrintLog(c, instruction)
 	c.Register.pc += 1
 	if IsImmediateTarget8(instruction.Source) || IsImmediateTarget8(instruction.Destination) {
 		c.Immediate = uint16(c.MMURead(c.Register.pc))
@@ -141,110 +140,110 @@ func (c *CPU) FetchInstruction(f *os.File) (Instruction, error) {
 	return instruction, nil
 }
 
-func (c *CPU) DecodeInstruction(instruction Instruction) error{
-		c.DestinationTarget, c.SourceTarget = instruction.Destination, instruction.Source
-		
-		//Get source
-		data, err := c.GetTarget(instruction.Source)
-		if err != nil{
-			return err
-		}
-		c.Source = data
+func (c *CPU) DecodeInstruction(instruction Instruction) error {
+	c.DestinationTarget, c.SourceTarget = instruction.Destination, instruction.Source
 
-		//Conditional mode
-		currentCondition := instruction.ConditionType
-		conditionResult, err := c.checkCond(currentCondition)
-		if err != nil{
-			return err
-		}
-		c.CurrentConditionResult = conditionResult
+	//Get source
+	data, err := c.GetTarget(instruction.Source)
+	if err != nil {
+		return err
+	}
+	c.Source = data
 
-		return nil
+	//Conditional mode
+	currentCondition := instruction.ConditionType
+	conditionResult, err := c.checkCond(currentCondition)
+	if err != nil {
+		return err
+	}
+	c.CurrentConditionResult = conditionResult
+
+	return nil
 }
 
 func (c *CPU) ExecuteInstruction(i Instruction) (int, error) {
-		cycles := 0
-		switch i.InstructionType {
-			case Nop:
-				cycles += c.Nop()
-			case Jp:
-				cycles += c.Jp()
-			case Jr:
-				cycles += c.Jr()
-			case Ld8:
-				cycles += c.Ld8()
-			case Ld16:
-				cycles += c.Ld16()
-			case Ldh:
-				cycles += c.Ldh()
-			case LdSPn:
-				cycles += c.LdSPn()
-			case Push:
-				cycles += c.Push()
-			case Pop:
-				cycles += c.Pop()
-			case Call:
-				cycles += c.Call()
-			case Ret:
-				cycles += c.Ret()
-			case Reti:
-				cycles += c.Reti()
-			case Rst:
-				cycles += c.Rst()
-			case Di:
-				cycles += c.Di()
-			case Ei:
-				cycles += c.Ei()
-			case Halt:
-				cycles += c.Halt()
-			case Daa:
-				cycles += c.Daa()
-			case Rlca:
-				cycles += c.Rlca()
-			case Rla:
-				cycles += c.Rla()
-			case Rrca:
-				cycles += c.Rrca()
-			case Rra:
-				cycles += c.Rra()
-			case Ccf:
-				cycles += c.Ccf()
-			case Cpl:
-				cycles += c.Cpl()
-			case Scf:
-				cycles += c.Scf()
-			case Inc:
-				cycles += c.Inc()
-			case Dec:
-				cycles += c.Dec()
-			case Add:
-				cycles += c.Add()
-			case AddHl:
-				cycles += c.AddHl()
-			case Add16_8:
-				cycles += c.Add16_8()
-			case Adc:
-				cycles += c.Adc()
-			case Sub:
-				cycles += c.Sub()
-			case Sbc:
-				cycles += c.Sbc()	
-			case Or:
-				cycles += c.Or()
-			case And:
-				cycles += c.And()
-			case Xor:
-				cycles += c.Xor()
-			case Cp:
-				cycles += c.Cp()
-			case Cb:
-				instructionCycles, err := c.Cb()
-				if err != nil{
-					return 0, err
-				}
-				cycles += instructionCycles
-			default:
-				return 0, fmt.Errorf("invalid instruction %s", i.InstructionType)
+	cycles := 0
+	switch i.InstructionType {
+	case Nop:
+		cycles += c.Nop()
+	case Jp:
+		cycles += c.Jp()
+	case Jr:
+		cycles += c.Jr()
+	case Ld8:
+		cycles += c.Ld8()
+	case Ld16:
+		cycles += c.Ld16()
+	case Ldh:
+		cycles += c.Ldh()
+	case LdSPn:
+		cycles += c.LdSPn()
+	case Push:
+		cycles += c.Push()
+	case Pop:
+		cycles += c.Pop()
+	case Call:
+		cycles += c.Call()
+	case Ret:
+		cycles += c.Ret()
+	case Reti:
+		cycles += c.Reti()
+	case Rst:
+		cycles += c.Rst()
+	case Di:
+		cycles += c.Di()
+	case Ei:
+		cycles += c.Ei()
+	case Halt:
+		cycles += c.Halt()
+	case Daa:
+		cycles += c.Daa()
+	case Rlca:
+		cycles += c.Rlca()
+	case Rla:
+		cycles += c.Rla()
+	case Rrca:
+		cycles += c.Rrca()
+	case Rra:
+		cycles += c.Rra()
+	case Ccf:
+		cycles += c.Ccf()
+	case Cpl:
+		cycles += c.Cpl()
+	case Scf:
+		cycles += c.Scf()
+	case Inc:
+		cycles += c.Inc()
+	case Dec:
+		cycles += c.Dec()
+	case Add:
+		cycles += c.Add()
+	case AddHl:
+		cycles += c.AddHl()
+	case Add16_8:
+		cycles += c.Add16_8()
+	case Adc:
+		cycles += c.Adc()
+	case Sub:
+		cycles += c.Sub()
+	case Sbc:
+		cycles += c.Sbc()
+	case Or:
+		cycles += c.Or()
+	case And:
+		cycles += c.And()
+	case Xor:
+		cycles += c.Xor()
+	case Cp:
+		cycles += c.Cp()
+	case Cb:
+		instructionCycles, err := c.Cb()
+		if err != nil {
+			return 0, err
 		}
-		return cycles, nil
+		cycles += instructionCycles
+	default:
+		return 0, fmt.Errorf("invalid instruction %s", i.InstructionType)
+	}
+	return cycles, nil
 }

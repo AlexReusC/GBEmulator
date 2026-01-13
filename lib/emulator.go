@@ -7,11 +7,11 @@ import (
 )
 
 type Emulator struct {
-	Cpu *CPU
+	Cpu  *CPU
 	cart *Cart
 	file *os.File
-	ppu *PPU
-	mmu *MMU
+	ppu  *PPU
+	mmu  *MMU
 
 	cpuCycles int
 }
@@ -32,7 +32,8 @@ func WithCart(p string) func(e *Emulator) {
 	}
 }
 
-//TODO: still a lot of refactor
+// Initialize emulator and main systems
+// TODO: still a lot of refactor
 func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 	emulator := new(Emulator)
 
@@ -49,7 +50,7 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 	if err != nil {
 		return nil, errors.New("ppu failed")
 	}
-	emulator.ppu = ppu 
+	emulator.ppu = ppu
 
 	serial := &Serial{data: 0, control: 0}
 	b, err := LoadBus(emulator.cart, serial, clock, emulator.ppu)
@@ -66,9 +67,12 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 	}
 	emulator.Cpu = cpu
 
-	return emulator, nil 
+	emulator.cpuCycles = 0
+
+	return emulator, nil
 }
 
+// Main emulator loop
 func (e *Emulator) Run() {
 	if e.cpuCycles <= 0 {
 		cycles, err := e.Cpu.Step(e.file)

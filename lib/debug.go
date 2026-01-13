@@ -46,8 +46,8 @@ func Log(c *CPU, i Instruction, f *os.File) {
 	output := fmt.Sprintf("%s Inst: %-6s Dest: %-6s Src: %-6s A: %02x F: %s BC: %02x%02x DE: %02x%02x  HL: %02x%02x SP: %x \n", pcData, i.InstructionType, i.Destination, i.Source, c.Register.a, flags, c.Register.b, c.Register.c, c.Register.d, c.Register.e, c.Register.h, c.Register.l, c.Register.sp)
 
 	if _, err := f.Write([]byte(output)); err != nil {
-        log.Fatal(err)
-    }
+		log.Fatal(err)
+	}
 }
 
 func PrintLog(c *CPU, i Instruction) {
@@ -60,12 +60,12 @@ func PrintLog(c *CPU, i Instruction) {
 
 func DoctorLog(c *CPU, f *os.File) {
 	doctor := fmt.Sprintf("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X\n", c.Register.a, c.Register.f, c.Register.b, c.Register.c, c.Register.d, c.Register.e, c.Register.h, c.Register.l, c.Register.sp, c.Register.pc, c.MMURead(c.Register.pc), c.MMURead(c.Register.pc+1), c.MMURead(c.Register.pc+2), c.MMURead(c.Register.pc+3))
-	
+
 	//fmt.Print(doctor)
 
 	if _, err := f.Write([]byte(doctor)); err != nil {
-       log.Fatal(err)
-    }
+		log.Fatal(err)
+	}
 }
 
 func GetInstructionsCycles(c *CPU) {
@@ -74,17 +74,17 @@ func GetInstructionsCycles(c *CPU) {
 		if ok {
 			c.SourceTarget = v.Source
 			c.DestinationTarget = v.Destination
-			c.currentOpcode = uint8(i)	
+			c.currentOpcode = uint8(i)
 			c.CurrentConditionResult = true
-			if v.ConditionType != cond_None{
+			if v.ConditionType != cond_None {
 				cycles, _ := c.ExecuteInstruction(v)
-				fmt.Printf("%x True %d\n",i, cycles)
-				c.CurrentConditionResult = false 
+				fmt.Printf("%x True %d\n", i, cycles)
+				c.CurrentConditionResult = false
 				cycles, _ = c.ExecuteInstruction(v)
-				fmt.Printf("%x False %d\n",i, cycles)
-			} else{
+				fmt.Printf("%x False %d\n", i, cycles)
+			} else {
 				cycles, _ := c.ExecuteInstruction(v)
-				fmt.Printf("%x %d\n",i, cycles)
+				fmt.Printf("%x %d\n", i, cycles)
 			}
 		}
 

@@ -3,14 +3,14 @@ package lib
 import "fmt"
 
 type MMU struct {
-	cart *Cart
-	wram [0x2000]uint8
-	hram [0x80]uint8
-	serial *Serial
-	ieRegister uint8
+	cart             *Cart
+	wram             [0x2000]uint8
+	hram             [0x80]uint8
+	serial           *Serial
+	ieRegister       uint8
 	interruptorFlags uint8
-	clock *Clock
-	ppu *PPU
+	clock            *Clock
+	ppu              *PPU
 }
 
 func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*MMU, error) {
@@ -19,7 +19,6 @@ func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*MMU, error) {
 	p.MMU = b
 	return b, nil
 }
-
 
 func (m *MMU) Read(a uint16) uint8 {
 	switch {
@@ -62,7 +61,7 @@ func (m *MMU) Write(a uint16, v uint8) {
 	switch {
 	case a < 0x8000:
 		m.cart.CartWrite(a, v)
-	case a < 0xA000: // Video RAM 
+	case a < 0xA000: // Video RAM
 		m.ppu.VramWrite(a, v)
 	case a < 0xC000: // Cartridge/external RAM
 		m.cart.CartWrite(a, v)
@@ -73,8 +72,8 @@ func (m *MMU) Write(a uint16, v uint8) {
 	case a < 0xFEA0: // Object attribute memory
 		m.ppu.oamwrite(a, v)
 	case a < 0xFF00: // Reserved (prohibited)
-		return 
-	case a < 0xFF03:// IO registers
+		return
+	case a < 0xFF03: // IO registers
 		m.serial.SerialWrite(a, v)
 	case a >= 0xFF04 && a <= 0xFF07:
 		m.clock.Write(a, v)
@@ -100,7 +99,7 @@ func (m *MMU) DmaTransfer(a uint8) {
 	for i := uint16(0); i < 0xA0; i++ {
 		v := m.Read(realAddress + i)
 		//fmt.Printf("memory %x %x\n", realAddress + i, v)
-		m.ppu.oamwrite(0xFE00 + i, v)
+		m.ppu.oamwrite(0xFE00+i, v)
 	}
 }
 
@@ -115,13 +114,12 @@ func (m *MMU) Write16(a uint16, v uint16) {
 	m.Write(a, uint8(v&0xFF))
 }
 
-
-func (m *MMU) WramRead(a uint16) uint8 { return m.wram[a-0xC000] }
+func (m *MMU) WramRead(a uint16) uint8     { return m.wram[a-0xC000] }
 func (m *MMU) WramWrite(a uint16, v uint8) { m.wram[a-0xC000] = v }
-func (m *MMU) HramRead(a uint16) uint8 { return m.hram[a-0xFF80] }
+func (m *MMU) HramRead(a uint16) uint8     { return m.hram[a-0xFF80] }
 func (m *MMU) HramWrite(a uint16, v uint8) { m.hram[a-0xFF80] = v }
-func (m *MMU) GetIeRegister() uint8 { return m.ieRegister }
-func (m *MMU) SetIeRegister(ir uint8) { m.ieRegister = ir }
+func (m *MMU) GetIeRegister() uint8        { return m.ieRegister }
+func (m *MMU) SetIeRegister(ir uint8)      { m.ieRegister = ir }
 
 func (m *MMU) RequestInterrupt(i InterruptorBit) {
 	m.interruptorFlags = SetBit(m.interruptorFlags, int(i))

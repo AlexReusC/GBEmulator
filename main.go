@@ -11,14 +11,14 @@ func main() {
 		fmt.Println("no file passed")
 		return
 	}
-	p := os.Args[1]
+	file := os.Args[1]
 	//logging
 	//f, err := os.Create("../gameboy-doctor/debug.txt")
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
 	//defer f.Close()
-	e, err := lib.LoadEmulator(lib.WithCart(p))
+	e, err := lib.LoadEmulator(lib.WithCart(file))
 	if err != nil {
 		fmt.Println(err)
 		return

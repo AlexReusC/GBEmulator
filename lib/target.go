@@ -30,7 +30,7 @@ func (c *CPU) SetFlag(flag flagRegister, cond bool) {
 }
 
 func (c *CPU) FormatFlag(f flagRegister, s rune) rune {
-	if c.GetFlag(f){
+	if c.GetFlag(f) {
 		return s
 	} else {
 		return '-'
@@ -62,7 +62,7 @@ func (c *CPU) GetTargetHL() uint16 {
 }
 
 /*Function for getting the target value dynamically
-*/
+ */
 func (c *CPU) GetTarget(t target) (uint16, error) {
 	switch t {
 	case A:
@@ -82,7 +82,7 @@ func (c *CPU) GetTarget(t target) (uint16, error) {
 	case L:
 		return uint16(c.Register.l), nil
 	case SPe8:
-		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.Immediate)))) 
+		val := uint16(int16(c.Register.sp) + int16(int8(uint8(c.Immediate))))
 		return val, nil
 	case AF:
 		return c.GetTargetAF(), nil
@@ -91,7 +91,7 @@ func (c *CPU) GetTarget(t target) (uint16, error) {
 	case DE:
 		return c.GetTargetDE(), nil
 	case HL:
-		return  c.GetTargetHL(), nil
+		return c.GetTargetHL(), nil
 	case SP:
 		return c.Register.sp, nil
 	case n:

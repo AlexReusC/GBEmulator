@@ -1,102 +1,6 @@
 package lib
 
-type procedure string
-type procedureCb string
-type conditional string
-type target string
-
-const (
-	Nop     procedure = "Nop"
-	Jp      procedure = "Jp"
-	Jr      procedure = "Jr"
-	Di      procedure = "Di"
-	Ld8     procedure = "Ld8"
-	Ld16    procedure = "Ld16"
-	Ldh     procedure = "Ldh"
-	LdSPn   procedure = "LDSp+n"
-	Push    procedure = "Push"
-	Pop     procedure = "Pop"
-	Call    procedure = "Call"
-	Ret     procedure = "Ret"
-	Reti    procedure = "Reti"
-	Rst     procedure = "Rst"
-	Inc     procedure = "Inc"
-	Dec     procedure = "Dec"
-	Add     procedure = "Add"
-	AddHl   procedure = "AddHl"
-	Add16_8 procedure = "Add16_8"
-	Adc     procedure = "Adc"
-	Sub     procedure = "Sub"
-	Sbc     procedure = "Sbc"
-	And     procedure = "And"
-	Xor     procedure = "Xor"
-	Or      procedure = "Or"
-	Cp      procedure = "Cp"
-	Cb      procedure = "Cb"
-	Rlca    procedure = "Rlca"
-	Rrca    procedure = "Rrca"
-	Stop    procedure = "Stop"
-	Rla     procedure = "Rla"
-	Rra     procedure = "Rra"
-	Daa     procedure = "Daa"
-	Cpl     procedure = "Cpl"
-	Scf     procedure = "Scf"
-	Ccf     procedure = "Ccf"
-	Ei      procedure = "Ei"
-	Halt    procedure = "Halt"
-)
-
-const (
-	Rlc  procedureCb = "Rlc"
-	Rrc  procedureCb = "Rrc"
-	Rl   procedureCb = "Rl"
-	Rr   procedureCb = "Rr"
-	Sla  procedureCb = "Sla"
-	Sra  procedureCb = "Sra"
-	Swap procedureCb = "Swap"
-	Srl  procedureCb = "Srl"
-	Bit  procedureCb = "Bit"
-	Res  procedureCb = "Res"
-	Set  procedureCb = "Set"
-)
-
-const (
-	A      target = "A"
-	B      target = "B"
-	C      target = "C"
-	D      target = "D"
-	E      target = "E"
-	F      target = "F"
-	H      target = "H"
-	L      target = "L"
-	AF     target = "AF"
-	BC     target = "BC"
-	DE     target = "DE"
-	HL     target = "HL"
-	SP     target = "SP"
-	e8     target = "e8"
-	SPe8   target = "SP+e8"
-	n      target = "n"
-	nn     target = "nn"
-	C_M    target = "(C)"
-	BC_M   target = "(BC)"
-	DE_M   target = "(DE)"
-	HL_M   target = "(HL)"
-	HLP_M  target = "(HL+)"
-	HLM_M  target = "(HL-)"
-	n_M    target = "(n)"
-	nn_M   target = "(nn)"
-	nn_M16 target = "(nn)16"
-	None   target = "none"
-)
-
-const (
-	cond_None conditional = "None"
-	cond_C    conditional = "C"
-	cond_NC   conditional = "NC"
-	cond_Z    conditional = "Z"
-	cond_NZ   conditional = "NZ"
-)
+//
 
 type Instruction struct {
 	InstructionType procedure
@@ -248,7 +152,6 @@ var instructions = map[uint8]Instruction{
 	0x7D: {Ld8, A, L, cond_None},
 	0x7E: {Ld8, A, HL_M, cond_None},
 	0x7F: {Ld8, A, A, cond_None},
-
 	//0x8X
 	0x80: {Add, None, B, cond_None},
 	0x81: {Add, None, C, cond_None},

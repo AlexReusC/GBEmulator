@@ -9,19 +9,19 @@ import (
 var DebugScreenOffset = 22
 
 type Screen struct {
-	emulator *Emulator
+	emulator  *Emulator
 	debugging bool
 }
 
 func (s *Screen) Draw(screen *ebiten.Image) {
 	var tileNum int = 0
 	for y := 0; y < 24; y++ {
-		for x := 0; x < 16; x++{
+		for x := 0; x < 16; x++ {
 			s.emulator.ppu.DebugDisplayTile(tileNum, x+DebugScreenOffset, y)
 			tileNum++
 		}
 	}
-	
+
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(2, 2)
 	image := ebiten.NewImageFromImage(s.emulator.ppu.Image)
@@ -43,7 +43,7 @@ func RunGame(e *Emulator) {
 	ebiten.SetWindowSize(650, 400)
 	ebiten.SetWindowTitle("GBEmulator")
 
-	ebiten.SetTPS(240*80*4)
+	ebiten.SetTPS(240 * 80 * 4)
 	if err := ebiten.RunGame(screen); err != nil {
 		log.Fatal(err)
 	}

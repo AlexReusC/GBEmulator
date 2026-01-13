@@ -7,30 +7,30 @@ import (
 )
 
 type header struct {
-	EntryPoint [0x4]uint8
-	Logo [0x30]uint8
-	Title [16]uint8
+	EntryPoint      [0x4]uint8
+	Logo            [0x30]uint8
+	Title           [16]uint8
 	NewLicenseeCode uint16
-	SgbFlag uint8
-	CartridgeType uint8
-	RomSize uint8
-	RamSize uint8
+	SgbFlag         uint8
+	CartridgeType   uint8
+	RomSize         uint8
+	RamSize         uint8
 	DestinationCode uint8
 	OldLicenseeCode uint8
-	MaskRomVersion uint8
-	HeaderChecksum uint8
-	GlobalChecksum uint16
+	MaskRomVersion  uint8
+	HeaderChecksum  uint8
+	GlobalChecksum  uint16
 }
 
-type Cart struct{
+type Cart struct {
 	Header header
 	Length int64
-	Rom []uint8
+	Rom    []uint8
 }
 
 func LoadCart(p string) (*Cart, error) {
 	file, err := os.Open(p)
-	if err != nil{
+	if err != nil {
 		fmt.Println("Failed to open")
 		return nil, err
 	}
@@ -45,7 +45,6 @@ func LoadCart(p string) (*Cart, error) {
 	}
 	myCart.Length = fi.Size()
 
-
 	file.Seek(0x0100, 0)
 	cartHeader := header{}
 	if err := binary.Read(file, binary.LittleEndian, &cartHeader); err != nil {
@@ -55,7 +54,7 @@ func LoadCart(p string) (*Cart, error) {
 	myCart.Header = cartHeader
 	file.Seek(0, 0)
 
-	cartRom := make([]uint8, myCart.Length)	
+	cartRom := make([]uint8, myCart.Length)
 	if err := binary.Read(file, binary.LittleEndian, &cartRom); err != nil {
 		fmt.Println("Invalid rom", err)
 		return nil, err
@@ -63,9 +62,9 @@ func LoadCart(p string) (*Cart, error) {
 	myCart.Rom = cartRom
 
 	fmt.Printf("Title: %s\n", myCart.Header.Title)
-	fmt.Printf("Type: % x\n", myCart.Header.CartridgeType)	
+	fmt.Printf("Type: % x\n", myCart.Header.CartridgeType)
 	fmt.Printf("Nintendo logo: % x\n", myCart.Header.Logo)
-	fmt.Printf("Rom: %d KB\n", 32 <<  myCart.Header.RomSize)
+	fmt.Printf("Rom: %d KB\n", 32<<myCart.Header.RomSize)
 	fmt.Printf("Ram: %x\n", myCart.Header.RamSize)
 	fmt.Printf("Lic Code: %x\n", myCart.Header.OldLicenseeCode)
 	fmt.Printf("Rom Version: %x\n", myCart.Header.MaskRomVersion)
