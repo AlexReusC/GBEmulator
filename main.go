@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"gbemulator/lib"
-	"log"
 	"os"
 )
 
@@ -14,12 +13,12 @@ func main() {
 	}
 	p := os.Args[1]
 	//logging
-	f, err := os.Create("../gameboy-doctor/debug.txt")
-    if err != nil {
-        log.Fatal(err)
-    }
-	defer f.Close()
-	e, err := lib.LoadEmulator(lib.WithFile(f), lib.WithCart(p))
+	//f, err := os.Create("../gameboy-doctor/debug.txt")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//defer f.Close()
+	e, err := lib.LoadEmulator(lib.WithCart(p))
 	if err != nil {
 		fmt.Println(err)
 		return
