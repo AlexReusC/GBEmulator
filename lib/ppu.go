@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"sort"
+	"strconv"
 )
 
 type PPUMode uint8
@@ -42,6 +43,11 @@ const (
 	Obp1
 )
 
+type PixelData struct {
+	color   uint8
+	palette Palette
+}
+
 type PPU struct {
 	dots          uint16
 	pixels        uint16 // x pos in screen
@@ -54,23 +60,25 @@ type PPU struct {
 	oam  [0xA0]uint8 // 160 = 40 * 4
 	vram [0x2000]uint8
 	//lcd
-	lcdControl, stat uint8
-	scy, scx         uint8
-	ly               uint8 //scan line
-	lyc              uint8
-	wy, wx           uint8
-	bgp, obp0, obp1  uint8
+	lcdControl, stat              uint8
+	scy, scx                      uint8
+	ly                            uint8 //scan line
+	lyc                           uint8
+	wy, wx                        uint8
+	backgroundPalette, obp0, obp1 uint8
+
+	buffer [8]PixelData
 }
 
 func LoadPpu() (*PPU, error) {
-	//ppu initial values
-	p := new(PPU)
-	p.Image = image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{160 + 128, 192}})
+	p := &PPU{
+		Image:             image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{160 + 128, 192}}),
+		lcdControl:        0x91,
+		backgroundPalette: 0xFC,
+		obp0:              0xFF,
+		obp1:              0xFF,
+	}
 
-	p.lcdControl = 0x91
-	p.bgp = 0xFC
-	p.obp0 = 0xFF
-	p.obp1 = 0xFF
 	return p, nil
 }
 
@@ -91,7 +99,7 @@ func (p *PPU) LcdRead(a uint16) uint8 {
 	case a == 0xFF46:
 		panic(0) //dma has no read
 	case a == 0xFF47:
-		return p.bgp
+		return p.backgroundPalette
 	case a == 0xFF48:
 		return p.obp0
 	case a == 0xFF49:
@@ -108,6 +116,7 @@ func (p *PPU) LcdRead(a uint16) uint8 {
 func (p *PPU) LcdWrite(a uint16, v uint8) {
 	switch {
 	case a == 0xFF40:
+		fmt.Println(strconv.FormatInt(int64(v), 2))
 		p.lcdControl = v
 	case a == 0xFF41:
 		p.stat = v
@@ -122,7 +131,7 @@ func (p *PPU) LcdWrite(a uint16, v uint8) {
 	case a == 0xFF46:
 		panic(0) //dma write is processed elsewhere
 	case a == 0xFF47:
-		p.bgp = v
+		p.backgroundPalette = v
 	case a == 0xFF48:
 		p.obp0 = v & 0b11111100
 	case a == 0xFF49:
@@ -155,9 +164,8 @@ func (p *PPU) GetBGWindowTileArea() uint16 {
 func (p *PPU) GetBGTileArea() uint16 {
 	if BitIsSet(p.lcdControl, 3) {
 		return 0x1C00
-	} else {
-		return 0x1800
 	}
+	return 0x1800
 }
 func (p *PPU) GetObjHeight() uint8 {
 	if BitIsSet(p.lcdControl, 2) {
@@ -185,7 +193,7 @@ func (p *PPU) GetColor(colorPixel uint8, palettePixel Palette) color.RGBA {
 	var paletteData uint8
 
 	if palettePixel == Bgp {
-		paletteData = p.bgp
+		paletteData = p.backgroundPalette
 	} else if palettePixel == Obp0 {
 		paletteData = p.obp0
 	} else if palettePixel == Obp1 {
@@ -248,9 +256,105 @@ func (p *PPU) UpdateLy() {
 	}
 }
 
+func (p *PPU) getSpritePixelData(x, bit int, spritesInTile []Sprite, spritesX []uint8, tileSpriteData0 []uint8, tileSpriteData1 []uint8, palettesInTile []Palette) (uint8, Palette) {
+	var pixelColor uint8
+	var pixelPalette Palette
+
+	for i := 0; i < len(palettesInTile); i++ {
+		offset := int(spritesX[i]) - x
+		if offset < 0 || offset > 7 {
+			continue
+		}
+		bit += offset
+
+		lo := (tileSpriteData0[i] & (1 << bit)) >> (bit)
+		hi := (tileSpriteData1[i] & (1 << bit)) >> (bit)
+
+		if spritesInTile[i].priority {
+			break
+		}
+		pixelColor = (hi << 1) | lo
+		pixelPalette = palettesInTile[i]
+
+		if pixelColor != 0x00 {
+			break
+		}
+	}
+	return pixelColor, pixelPalette
+}
+
+func (p *PPU) fillBuffer() {
+	//Clear buffer
+	p.buffer = [8]PixelData{}
+
+	// Background Data
+	mapX := (p.pixels + uint16(p.scx)) / 8
+	mapY := (p.ly + p.scy) / 8
+
+	tileId := p.vram[p.GetBGTileArea()+uint16(mapX)+(uint16(mapY)*32)]
+	if p.GetBGWindowTileArea() == 0x0800 {
+		tileId += 128
+	}
+
+	var tileData [2]uint8
+	tileData[0] = p.vram[p.GetBGWindowTileArea()+(uint16(tileId)*16)+((uint16(p.ly+p.scy)%8)*2)]
+	tileData[1] = p.vram[p.GetBGWindowTileArea()+(uint16(tileId)*16)+((uint16(p.ly+p.scy)%8)*2)+1]
+
+	// Sprite Data
+	spritesInTile := []Sprite{}
+	spritesX := []uint8{}
+	tileSpriteData0 := []uint8{}
+	tileSpriteData1 := []uint8{}
+	palettesInTile := []Palette{}
+	for i := 0; i < len(p.sprites); i++ {
+		spriteX := (p.sprites[i].xPos - 8)
+		spriteLowerX, _ := spriteX, spriteX+8
+
+		spritesInTile = append(spritesInTile, p.sprites[i])
+		spritesX = append(spritesX, spriteLowerX)
+	}
+
+	for i := 0; i < len(spritesInTile); i++ {
+		spritePixels := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2]
+		tileSpriteData0 = append(tileSpriteData0, spritePixels)
+		spritePixels = p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2+1]
+		tileSpriteData1 = append(tileSpriteData1, spritePixels)
+		palettesInTile = append(palettesInTile, p.GetPaletteSprite(spritesInTile[i].palette))
+	}
+
+	//render
+
+	for bit := 7; bit >= 0; bit-- {
+		pixel := PixelData{color: uint8(0x00), palette: Bgp}
+
+		//if p.GetBGWindowEnable() {
+		lo := (tileData[0] & (1 << bit)) >> (bit)
+		hi := (tileData[1] & (1 << bit)) >> (bit)
+		pixel.color = (hi << 1) | lo
+		//}
+
+		if p.GetObjEnable() {
+			x := int(p.pixels) + (int(p.scx) % 8)
+			if color, palette := p.getSpritePixelData(x, bit, spritesInTile, spritesX, tileSpriteData0, tileSpriteData1, palettesInTile); color != 0x00 {
+				pixel.color = color
+				pixel.palette = palette
+			}
+		}
+
+		p.buffer[7-bit] = pixel
+	}
+}
+
+func (p *PPU) getPixelInfo() PixelData {
+	horizontalPosition := p.pixels % 8
+	return p.buffer[horizontalPosition]
+}
+
 func (p *PPU) Update(cycles int) {
+
+	fmt.Println(strconv.FormatInt(int64(p.lcdControl), 2))
 	switch p.GetMode() {
-	case HBlank:
+	case HBlank: //51 clocks
 		p.dots++
 		if p.dots == 456 {
 			p.UpdateLy()
@@ -268,7 +372,7 @@ func (p *PPU) Update(cycles int) {
 				}
 			}
 		}
-	case VBlank:
+	case VBlank: //10 lines
 		p.dots++
 		if p.dots == 456 {
 			p.UpdateLy()
@@ -278,16 +382,33 @@ func (p *PPU) Update(cycles int) {
 			}
 			p.dots = 0
 		}
-	case OamSearch:
+	case OamSearch: //20 clocks
 		p.dots++
 		if p.dots == 80 {
-
+			p.dots = 0
 			p.pixels = 0
 			p.SetMode(PixelTransfer)
 			p.GetSpritesInLine()
 		}
-	case PixelTransfer:
-		p.SetMode(HBlank)
+	case PixelTransfer: // 43 clocks
+		if p.pixels%8 == 0 {
+			p.fillBuffer()
+		}
+
+		currentPixel := p.getPixelInfo()
+
+		p.Image.SetRGBA(int(p.pixels), int(p.ly), p.GetColor(currentPixel.color, currentPixel.palette))
+		p.pixels++
+
+		if p.pixels == 160 {
+			p.pixels = 0
+			p.SetMode(HBlank)
+
+			if p.HBlankSourceSelected() {
+				p.MMU.RequestInterrupt(LCDSATUS)
+			}
+		}
+
 	default:
 		panic(fmt.Sprintf("unexpected ppu mode %d", p.GetMode()))
 	}

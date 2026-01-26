@@ -16,7 +16,6 @@ type MMU struct {
 func LoadBus(rb *Cart, s *Serial, c *Clock, p *PPU) (*MMU, error) {
 	b := &MMU{cart: rb, serial: s, clock: c, ppu: p}
 
-	p.MMU = b
 	return b, nil
 }
 
@@ -98,7 +97,6 @@ func (m *MMU) DmaTransfer(a uint8) {
 	realAddress := uint16(a) << 8
 	for i := uint16(0); i < 0xA0; i++ {
 		v := m.Read(realAddress + i)
-		//fmt.Printf("memory %x %x\n", realAddress + i, v)
 		m.ppu.oamwrite(0xFE00+i, v)
 	}
 }

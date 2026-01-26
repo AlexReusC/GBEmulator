@@ -67,6 +67,7 @@ func LoadEmulator(options ...func(*Emulator)) (*Emulator, error) {
 	}
 	emulator.Cpu = cpu
 
+	ppu.MMU = b
 	emulator.cpuCycles = 0
 
 	return emulator, nil
