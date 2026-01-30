@@ -583,16 +583,16 @@ func (c *CPU) Cp() int {
 	return 2 //Cp a,[HL] & Cp A, n8
 }
 
-// Rotate Regiser Left
+// Rotate Register Left
 func (c *CPU) Rlc(input uint16, t target) int {
-	msbOn := input & 0x80 //128
+	msbOn := uint8(input) & 0x80 //128
 	result := input << 1
 	if msbOn != 0 {
 		result |= 0x1
 	}
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result&0xFF) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, msbOn != 0)
@@ -612,7 +612,7 @@ func (c *CPU) Rrc(input uint16, t target) int {
 	}
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result&0xFF) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
@@ -652,7 +652,7 @@ func (c *CPU) Rr(input uint16, t target) int {
 	}
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result&0xFF) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
@@ -687,7 +687,7 @@ func (c *CPU) Sra(input uint16, t target) int {
 	result := msbOn | (input >> 1)
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result&0xFF) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
@@ -702,7 +702,7 @@ func (c *CPU) Swap(input uint16, t target) int {
 	result := ((input & 0x0F) << 4) | ((input & 0xF0) >> 4)
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, (result&0xFF) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, false)
@@ -719,7 +719,7 @@ func (c *CPU) Srl(input uint16, t target) int {
 	result := input >> 1
 	c.SetTarget(t, result)
 
-	c.SetFlag(flagZ, result == 0)
+	c.SetFlag(flagZ, uint8(result) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, false)
 	c.SetFlag(flagC, lsbOn != 0)
@@ -731,7 +731,7 @@ func (c *CPU) Srl(input uint16, t target) int {
 }
 
 func (c *CPU) Bit(input uint16, t target, b uint8) int {
-	c.SetFlag(flagZ, input&(1<<b) == 0)
+	c.SetFlag(flagZ, uint8(input&(1<<b)) == 0)
 	c.SetFlag(flagN, false)
 	c.SetFlag(flagH, true)
 
@@ -766,14 +766,13 @@ func (c *CPU) Cb() (int, error) {
 	op := uint8(c.Source)
 	instruction := cbOpcodes[op]
 
-	data, err := c.GetTarget(instruction.Register)
+	input, err := c.GetTarget(instruction.Register)
 	if err != nil {
 		return 0, err
 	}
 
-	input := data
-	if IsPointer(c.SourceTarget) {
-		input = uint16(c.MMURead(data))
+	if IsPointer(instruction.Register) {
+		input = uint16(c.MMURead(input))
 	}
 
 	switch instruction.Instruction {

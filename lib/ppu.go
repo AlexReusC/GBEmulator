@@ -5,11 +5,12 @@ import (
 	"image"
 	"image/color"
 	"sort"
-	"strconv"
 )
 
 type PPUMode uint8
 type Palette uint8
+
+const DOTS_PER_LINE = 456
 
 const (
 	priorityMaskBit = 1 << 7
@@ -78,6 +79,7 @@ func LoadPpu() (*PPU, error) {
 		obp0:              0xFF,
 		obp1:              0xFF,
 	}
+	p.SetMode(OamSearch)
 
 	return p, nil
 }
@@ -93,6 +95,7 @@ func (p *PPU) LcdRead(a uint16) uint8 {
 	case a == 0xFF43:
 		return p.scx
 	case a == 0xFF44:
+		// return 0x90 if cpu_instrs testing
 		return p.ly
 	case a == 0xFF45:
 		return p.lyc
@@ -116,7 +119,6 @@ func (p *PPU) LcdRead(a uint16) uint8 {
 func (p *PPU) LcdWrite(a uint16, v uint8) {
 	switch {
 	case a == 0xFF40:
-		fmt.Println(strconv.FormatInt(int64(v), 2))
 		p.lcdControl = v
 	case a == 0xFF41:
 		p.stat = v
@@ -327,11 +329,11 @@ func (p *PPU) fillBuffer() {
 	for bit := 7; bit >= 0; bit-- {
 		pixel := PixelData{color: uint8(0x00), palette: Bgp}
 
-		//if p.GetBGWindowEnable() {
-		lo := (tileData[0] & (1 << bit)) >> (bit)
-		hi := (tileData[1] & (1 << bit)) >> (bit)
-		pixel.color = (hi << 1) | lo
-		//}
+		if p.GetBGWindowEnable() {
+			lo := (tileData[0] & (1 << bit)) >> (bit)
+			hi := (tileData[1] & (1 << bit)) >> (bit)
+			pixel.color = (hi << 1) | lo
+		}
 
 		if p.GetObjEnable() {
 			x := int(p.pixels) + (int(p.scx) % 8)
@@ -352,11 +354,11 @@ func (p *PPU) getPixelInfo() PixelData {
 
 func (p *PPU) Update(cycles int) {
 
-	fmt.Println(strconv.FormatInt(int64(p.lcdControl), 2))
+	//fmt.Println(strconv.FormatInt(int64(p.lcdControl), 2))
 	switch p.GetMode() {
 	case HBlank: //51 clocks
 		p.dots++
-		if p.dots == 456 {
+		if p.dots == DOTS_PER_LINE {
 			p.UpdateLy()
 			p.dots = 0
 			if p.ly < 144 { //rendered line
@@ -374,9 +376,9 @@ func (p *PPU) Update(cycles int) {
 		}
 	case VBlank: //10 lines
 		p.dots++
-		if p.dots == 456 {
+		if p.dots == DOTS_PER_LINE {
 			p.UpdateLy()
-			if p.ly == 154 { //ppu has visited last line (153)
+			if p.ly > 153 { //ppu has visited last line (153)
 				p.ly = 0
 				p.SetMode(OamSearch)
 			}
@@ -385,7 +387,6 @@ func (p *PPU) Update(cycles int) {
 	case OamSearch: //20 clocks
 		p.dots++
 		if p.dots == 80 {
-			p.dots = 0
 			p.pixels = 0
 			p.SetMode(PixelTransfer)
 			p.GetSpritesInLine()
@@ -399,6 +400,7 @@ func (p *PPU) Update(cycles int) {
 
 		p.Image.SetRGBA(int(p.pixels), int(p.ly), p.GetColor(currentPixel.color, currentPixel.palette))
 		p.pixels++
+		p.dots++
 
 		if p.pixels == 160 {
 			p.pixels = 0

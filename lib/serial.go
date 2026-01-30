@@ -6,6 +6,10 @@ type Serial struct {
 }
 
 func (s *Serial) SerialRead(a uint16) uint8 {
+	if a == 0xFF00 {
+		return 0xFF //TODO: this for testing, implement later
+	}
+
 	if a == 0xFF01 {
 		return s.data
 	}

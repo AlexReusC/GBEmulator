@@ -45,6 +45,8 @@ type CPU struct {
 	MasterInterruptEnabled     bool
 	EnableMasterInterruptAfter int
 	Interrupts                 uint8
+
+	InstructionNumber int
 }
 
 func LoadCpu(m *MMU, d *Debug, cl *Clock) (*CPU, error) {
@@ -61,9 +63,10 @@ func LoadCpu(m *MMU, d *Debug, cl *Clock) (*CPU, error) {
 			pc: 0x0100,
 			sp: 0xFFFE,
 		},
-		MMU:   m,
-		Debug: d,
-		Clock: cl,
+		MMU:               m,
+		Debug:             d,
+		Clock:             cl,
+		InstructionNumber: 0,
 	}
 
 	return c, nil
@@ -85,6 +88,8 @@ func (c *CPU) UpdateClock(cycles int) {
 func (c *CPU) Step(f *os.File) (int, error) {
 	cycles := 0
 	if !c.Halted {
+		c.InstructionNumber++
+
 		instruction, err := c.FetchInstruction(f)
 		if err != nil {
 			return 0, err

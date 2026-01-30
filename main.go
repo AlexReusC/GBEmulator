@@ -12,7 +12,7 @@ func main() {
 		return
 	}
 	file := os.Args[1]
-	//logging
+	//logging for gb doctor
 	//f, err := os.Create("../gameboy-doctor/debug.txt")
 	//if err != nil {
 	//	log.Fatal(err)
