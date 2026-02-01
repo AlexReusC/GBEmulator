@@ -32,7 +32,7 @@ func (d *Debug) DebugUpdate(m *MMU) {
 
 func (d *Debug) DebugPrint() {
 	if d.debugMsg[0] != 0 {
-		fmt.Printf("DBG: %s\n", string(d.debugMsg))
+		//fmt.Printf("DBG: %s\n", string(d.debugMsg))
 	}
 }
 
