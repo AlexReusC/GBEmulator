@@ -50,12 +50,12 @@ type PixelData struct {
 }
 
 type PPU struct {
-	dots          uint16
-	pixels        uint16 // x pos in screen
-	Image         *image.RGBA
-	MMU           *MMU
-	sprites       []Sprite
-	spritesInLine int
+	dots               uint16
+	pixels             uint16 // x pos in screen
+	Image              *image.RGBA
+	MMU                *MMU
+	spritesInLine      []Sprite
+	spritesInLineCount int
 
 	//memory
 	oam  [0xA0]uint8 // 160 = 40 * 4
@@ -73,7 +73,7 @@ type PPU struct {
 
 func LoadPpu() (*PPU, error) {
 	p := &PPU{
-		Image:             image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{160 + 128, 192}}),
+		Image:             image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{160 + 128 + 22, 192}}),
 		lcdControl:        0x91,
 		backgroundPalette: 0xFC,
 		obp0:              0xFF,
@@ -148,6 +148,8 @@ func (p *PPU) LcdWrite(a uint16, v uint8) {
 }
 
 func (p *PPU) GetLcdPpuEnable() bool { return BitIsSet(p.lcdControl, 7) }
+
+// If
 func (p *PPU) GetWindowMapArea() uint16 {
 	if BitIsSet(p.lcdControl, 6) {
 		return 0x1C00
@@ -156,12 +158,8 @@ func (p *PPU) GetWindowMapArea() uint16 {
 	}
 }
 func (p *PPU) GetWindowEnable() bool { return BitIsSet(p.lcdControl, 5) }
-func (p *PPU) GetBGWindowTileArea() uint16 {
-	if BitIsSet(p.lcdControl, 4) {
-		return 0
-	} else {
-		return 0x0800
-	}
+func (p *PPU) GetBGWindowTileArea() bool {
+	return BitIsSet(p.lcdControl, 4)
 }
 func (p *PPU) GetBGTileArea() uint16 {
 	if BitIsSet(p.lcdControl, 3) {
@@ -176,7 +174,11 @@ func (p *PPU) GetObjHeight() uint8 {
 		return 16
 	}
 }
-func (p *PPU) GetObjEnable() bool      { return BitIsSet(p.lcdControl, 1) }
+
+// Toggles if object will appear
+func (p *PPU) GetObjEnable() bool { return BitIsSet(p.lcdControl, 1) }
+
+// If 0 both window and background will be blank
 func (p *PPU) GetBGWindowEnable() bool { return BitIsSet(p.lcdControl, 0) }
 
 func (p *PPU) LycSourceSelected() bool       { return BitIsSet(p.stat, 6) }
@@ -214,18 +216,18 @@ func (p *PPU) GetPaletteSprite(dmgP bool) Palette {
 }
 
 func (p *PPU) GetSpritesInLine() {
-	p.sprites = []Sprite{}
-	p.spritesInLine = 0
+	p.spritesInLine = []Sprite{}
+	p.spritesInLineCount = 0
 	spriteHeight := p.GetObjHeight()
 
 	//get 10 sprites in this line
-	for i := 0; i < 40 && p.spritesInLine <= 10; i++ {
+	for i := 0; i < 40 && p.spritesInLineCount < 10; i++ {
 		spriteY, spriteX, spriteIndex, spriteFlags := p.oam[i*4], p.oam[i*4+1], p.oam[i*4+2], p.oam[i*4+3]
 		//sprite is touching y
 		if (spriteY > p.ly+16) || (spriteY+spriteHeight <= p.ly+16) {
 			continue
 		}
-		p.spritesInLine++ //sprite is counted even if next condition is true
+		p.spritesInLineCount++ //sprite is counted even if next condition is true
 		//sprite is invisible because of x
 		if spriteX == 0 {
 			continue
@@ -236,11 +238,11 @@ func (p *PPU) GetSpritesInLine() {
 		yFlipped := (spriteFlags & yFlipBit) != 0
 		xFlipped := (spriteFlags & xFlipBit) != 0
 
-		p.sprites = append(p.sprites, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
+		p.spritesInLine = append(p.spritesInLine, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
 	}
 
-	sort.SliceStable(p.sprites, func(i, j int) bool {
-		return p.sprites[i].xPos < p.sprites[j].xPos
+	sort.SliceStable(p.spritesInLine, func(i, j int) bool {
+		return p.spritesInLine[i].xPos < p.spritesInLine[j].xPos
 	})
 
 }
@@ -258,29 +260,31 @@ func (p *PPU) UpdateLy() {
 	}
 }
 
-func (p *PPU) getSpritePixelData(x, bit int, spritesInTile []Sprite, spritesX []uint8, tileSpriteData0 []uint8, tileSpriteData1 []uint8, palettesInTile []Palette) (uint8, Palette) {
-	var pixelColor uint8
+func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uint8, Palette) {
+	pixelColor := uint8(0x00)
 	var pixelPalette Palette
 
-	for i := 0; i < len(palettesInTile); i++ {
-		offset := int(spritesX[i]) - x
-		if offset < 0 || offset > 7 {
+	for i := 0; i < len(spritesInTile); i++ {
+		// checks if sprite is in this pixel
+		spriteX := int(spritesInTile[i].xPos)
+		offset := int(x) + bit
+		if offset <= spriteX || offset > spriteX+8 {
 			continue
 		}
-		bit += offset
 
-		lo := (tileSpriteData0[i] & (1 << bit)) >> (bit)
-		hi := (tileSpriteData1[i] & (1 << bit)) >> (bit)
+		spritePixelsLo := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2]
+		spritePixelsHi := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2+1]
 
-		if spritesInTile[i].priority {
+		lo := GetBit(spritePixelsLo, uint8(bit))
+		hi := GetBit(spritePixelsHi, uint8(bit))
+
+		spritePixelColor := (hi << 1) | lo
+		if spritePixelColor != 0x00 {
+			pixelColor = spritePixelColor
+			pixelPalette = p.GetPaletteSprite(spritesInTile[i].palette)
 			break
 		}
-		pixelColor = (hi << 1) | lo
-		pixelPalette = palettesInTile[i]
 
-		if pixelColor != 0x00 {
-			break
-		}
 	}
 	return pixelColor, pixelPalette
 }
@@ -289,39 +293,27 @@ func (p *PPU) fillBuffer() {
 	//Clear buffer
 	p.buffer = [8]PixelData{}
 
-	// Background Data
-	mapX := (p.pixels + uint16(p.scx)) / 8
-	mapY := (p.ly + p.scy) / 8
+	x := (p.pixels + uint16(p.scx)) & 0xFF
+	y := (p.ly + p.scy) & 0xFF
 
-	tileId := p.vram[p.GetBGTileArea()+uint16(mapX)+(uint16(mapY)*32)]
-	if p.GetBGWindowTileArea() == 0x0800 {
-		tileId += 128
-	}
+	// Background Data
+	mapX := x / 8
+	mapY := y / 8
+
+	tileId := uint16(p.vram[p.GetBGTileArea()+uint16(mapX)+(uint16(mapY)*32)])
 
 	var tileData [2]uint8
-	tileData[0] = p.vram[p.GetBGWindowTileArea()+(uint16(tileId)*16)+((uint16(p.ly+p.scy)%8)*2)]
-	tileData[1] = p.vram[p.GetBGWindowTileArea()+(uint16(tileId)*16)+((uint16(p.ly+p.scy)%8)*2)+1]
+	tileData[0] = p.vram[(uint16(tileId)*16)+((uint16(y)%8)*2)]
+	tileData[1] = p.vram[(uint16(tileId)*16)+((uint16(y)%8)*2)+1]
 
 	// Sprite Data
 	spritesInTile := []Sprite{}
-	spritesX := []uint8{}
-	tileSpriteData0 := []uint8{}
-	tileSpriteData1 := []uint8{}
-	palettesInTile := []Palette{}
-	for i := 0; i < len(p.sprites); i++ {
-		spriteX := (p.sprites[i].xPos - 8)
-		spriteLowerX, _ := spriteX, spriteX+8
-
-		spritesInTile = append(spritesInTile, p.sprites[i])
-		spritesX = append(spritesX, spriteLowerX)
-	}
-
-	for i := 0; i < len(spritesInTile); i++ {
-		spritePixels := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2]
-		tileSpriteData0 = append(tileSpriteData0, spritePixels)
-		spritePixels = p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2+1]
-		tileSpriteData1 = append(tileSpriteData1, spritePixels)
-		palettesInTile = append(palettesInTile, p.GetPaletteSprite(spritesInTile[i].palette))
+	for i := 0; i < len(p.spritesInLine) && len(spritesInTile) < 3; i++ {
+		spriteX := uint16(p.spritesInLine[i].xPos)
+		//check if sprite is inside this tile
+		if (spriteX >= p.pixels && spriteX < p.pixels+8) || (spriteX+8 >= p.pixels && spriteX+8 < p.pixels+8) {
+			spritesInTile = append(spritesInTile, p.spritesInLine[i])
+		}
 	}
 
 	//render
@@ -336,8 +328,7 @@ func (p *PPU) fillBuffer() {
 		}
 
 		if p.GetObjEnable() {
-			x := int(p.pixels) + (int(p.scx) % 8)
-			if color, palette := p.getSpritePixelData(x, bit, spritesInTile, spritesX, tileSpriteData0, tileSpriteData1, palettesInTile); color != 0x00 {
+			if color, palette := p.getSpritePixelData(x, bit, spritesInTile); color != 0x00 {
 				pixel.color = color
 				pixel.palette = palette
 			}
@@ -353,8 +344,6 @@ func (p *PPU) getPixelInfo() PixelData {
 }
 
 func (p *PPU) Update(cycles int) {
-
-	//fmt.Println(strconv.FormatInt(int64(p.lcdControl), 2))
 	switch p.GetMode() {
 	case HBlank: //51 clocks
 		p.dots++
@@ -430,18 +419,19 @@ func (p *PPU) oamwrite(a uint16, v uint8) {
 func (p *PPU) DebugDisplayTile(tile int, x int, y int) {
 	colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}, {255, 0, 0, 1}}
 
-	var tileY int
-	for tileY = 0; tileY < 16; tileY += 2 {
-		byte1 := p.vram[(tile*16)+tileY]
-		byte2 := p.vram[(tile*16)+tileY+1]
+	for yy := 0; yy < 16; yy += 2 {
+		byte1 := p.vram[(tile*16)+yy]
+		byte2 := p.vram[(tile*16)+yy+1]
 
-		var tileX int
-		for tileX = 0; tileX < 8; tileX++ {
-			bit1 := (byte1 & (1 << tileX)) >> (tileX)
-			bit2 := (byte2 & (1 << tileX)) >> (tileX)
+		for xx := 0; xx < 8; xx++ {
+			bit1 := (byte1 & (1 << xx)) >> (xx)
+			bit2 := (byte2 & (1 << xx)) >> (xx)
 
 			color := colors[(bit2<<1)|bit1]
-			p.Image.SetRGBA(int(7-tileX+(x*8)), int((tileY/2))+(y*8), color)
+			finalX := int(7 - xx + (x * 8))
+			finalY := int((yy / 2)) + (y * 8)
+			p.Image.SetRGBA(finalX, finalY, color)
 		}
 	}
+
 }

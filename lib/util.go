@@ -20,6 +20,13 @@ func BitIsSet(n uint8, b uint8) bool {
 	return false
 }
 
+func GetBit(n uint8, b uint8) uint8 {
+	if n&(1<<b) != 0 {
+		return 1
+	}
+	return 0
+}
+
 func SetBitWithCond(b uint8, n int, c bool) uint8 {
 	if c {
 		return (b | (1 << n))

@@ -14,6 +14,7 @@ type Screen struct {
 }
 
 func (s *Screen) Draw(screen *ebiten.Image) {
+	//debug
 	var tileNum int = 0
 	for y := 0; y < 24; y++ {
 		for x := 0; x < 16; x++ {
