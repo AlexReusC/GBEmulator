@@ -151,27 +151,29 @@ func (p *PPU) GetLcdPpuEnable() bool { return BitIsSet(p.lcdControl, 7) }
 
 // If
 func (p *PPU) GetWindowMapArea() uint16 {
-	if BitIsSet(p.lcdControl, 6) {
-		return 0x1C00
-	} else {
-		return 0x1800
-	}
+	//if BitIsSet(p.lcdControl, 6) {
+	//	return 0x1C00
+	//} else {
+	return 0x1800
+	//}
 }
 func (p *PPU) GetWindowEnable() bool { return BitIsSet(p.lcdControl, 5) }
 func (p *PPU) GetBGWindowTileArea() bool {
 	return BitIsSet(p.lcdControl, 4)
 }
 func (p *PPU) GetBGTileArea() uint16 {
-	if BitIsSet(p.lcdControl, 3) {
-		return 0x1C00
-	}
+	/*
+		if BitIsSet(p.lcdControl, 3) {
+			return 0x1C00
+		}
+	*/
 	return 0x1800
 }
-func (p *PPU) GetObjHeight() uint8 {
+func (p *PPU) GetAdditionalObjHeight() uint8 {
 	if BitIsSet(p.lcdControl, 2) {
-		return 8
+		return 0
 	} else {
-		return 16
+		return 8
 	}
 }
 
@@ -196,11 +198,12 @@ func (p *PPU) GetColor(colorPixel uint8, palettePixel Palette) color.RGBA {
 	colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}}
 	var paletteData uint8
 
-	if palettePixel == Bgp {
+	switch palettePixel {
+	case Bgp:
 		paletteData = p.backgroundPalette
-	} else if palettePixel == Obp0 {
+	case Obp0:
 		paletteData = p.obp0
-	} else if palettePixel == Obp1 {
+	case Obp1:
 		paletteData = p.obp1
 	}
 
@@ -215,21 +218,16 @@ func (p *PPU) GetPaletteSprite(dmgP bool) Palette {
 	return Obp0
 }
 
-func (p *PPU) GetSpritesInLine() {
-	p.spritesInLine = []Sprite{}
-	p.spritesInLineCount = 0
-	spriteHeight := p.GetObjHeight()
+func (p *PPU) GetSpritesInLine(lineY uint8) []Sprite {
+	spritesInLine := []Sprite{}
+	//spriteAdditionalHeight := p.GetAdditionalObjHeight() TODO: add
 
-	//get 10 sprites in this line
-	for i := 0; i < 40 && p.spritesInLineCount < 10; i++ {
+	for i := 0; i < 40; i++ {
 		spriteY, spriteX, spriteIndex, spriteFlags := p.oam[i*4], p.oam[i*4+1], p.oam[i*4+2], p.oam[i*4+3]
 		//sprite is touching y
-		if (spriteY > p.ly+16) || (spriteY+spriteHeight <= p.ly+16) {
-			continue
-		}
-		p.spritesInLineCount++ //sprite is counted even if next condition is true
-		//sprite is invisible because of x
-		if spriteX == 0 {
+		lowerBound := p.ly + 8
+		upperBound := p.ly + 16
+		if !((lowerBound < spriteY) && (upperBound >= spriteY)) {
 			continue
 		}
 
@@ -238,13 +236,18 @@ func (p *PPU) GetSpritesInLine() {
 		yFlipped := (spriteFlags & yFlipBit) != 0
 		xFlipped := (spriteFlags & xFlipBit) != 0
 
-		p.spritesInLine = append(p.spritesInLine, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
+		spritesInLine = append(spritesInLine, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
 	}
 
-	sort.SliceStable(p.spritesInLine, func(i, j int) bool {
-		return p.spritesInLine[i].xPos < p.spritesInLine[j].xPos
+	sort.SliceStable(spritesInLine, func(i, j int) bool {
+		return spritesInLine[i].xPos < spritesInLine[j].xPos
 	})
 
+	if len(spritesInLine) > 10 {
+		spritesInLine = spritesInLine[:10]
+	}
+
+	return spritesInLine
 }
 
 func (p *PPU) UpdateLy() {
@@ -268,7 +271,7 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 		// checks if sprite is in this pixel
 		spriteX := int(spritesInTile[i].xPos)
 		offset := int(x) + bit
-		if offset <= spriteX || offset > spriteX+8 {
+		if offset < spriteX || offset > spriteX+8 {
 			continue
 		}
 
@@ -378,7 +381,7 @@ func (p *PPU) Update(cycles int) {
 		if p.dots == 80 {
 			p.pixels = 0
 			p.SetMode(PixelTransfer)
-			p.GetSpritesInLine()
+			p.spritesInLine = p.GetSpritesInLine(p.ly)
 		}
 	case PixelTransfer: // 43 clocks
 		if p.pixels%8 == 0 {
