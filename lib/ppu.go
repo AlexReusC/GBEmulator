@@ -268,15 +268,25 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 	var pixelPalette Palette
 
 	for i := 0; i < len(spritesInTile); i++ {
+		sprite := spritesInTile[i]
 		// checks if sprite is in this pixel
-		spriteX := int(spritesInTile[i].xPos)
+		spriteX := int(sprite.xPos)
 		offset := int(x) + bit
-		if offset < spriteX || offset > spriteX+8 {
+		if offset < spriteX || offset > spriteX+7 {
 			continue
 		}
 
-		spritePixelsLo := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2]
-		spritePixelsHi := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+((uint16(p.ly)+16)-uint16(spritesInTile[i].yPos))*2+1]
+		pixelLine := uint16(p.ly + 16 - sprite.yPos)
+		if sprite.yFlipped {
+			pixelLine = 7 - (pixelLine % 8)
+		}
+
+		spritePixelsLo := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+pixelLine*2]
+		spritePixelsHi := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+pixelLine*2+1]
+
+		if sprite.xFlipped {
+			bit = 7 - (bit % 8)
+		}
 
 		lo := GetBit(spritePixelsLo, uint8(bit))
 		hi := GetBit(spritePixelsHi, uint8(bit))
@@ -320,7 +330,6 @@ func (p *PPU) fillBuffer() {
 	}
 
 	//render
-
 	for bit := 7; bit >= 0; bit-- {
 		pixel := PixelData{color: uint8(0x00), palette: Bgp}
 
