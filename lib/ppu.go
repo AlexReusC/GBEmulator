@@ -270,9 +270,9 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 	for i := 0; i < len(spritesInTile); i++ {
 		sprite := spritesInTile[i]
 		// checks if sprite is in this pixel
-		spriteX := int(sprite.xPos)
+		spriteX := int(sprite.xPos) - 8
 		offset := int(x) + bit
-		if offset < spriteX || offset > spriteX+7 {
+		if offset < 0 || offset < spriteX || offset > spriteX+7 {
 			continue
 		}
 
@@ -281,8 +281,8 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 			pixelLine = 7 - (pixelLine % 8)
 		}
 
-		spritePixelsLo := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+pixelLine*2]
-		spritePixelsHi := p.vram[(uint16(spritesInTile[i].tileIndex)*16)+pixelLine*2+1]
+		spritePixelsLo := p.vram[(uint16(sprite.tileIndex)*16)+pixelLine*2]
+		spritePixelsHi := p.vram[(uint16(sprite.tileIndex)*16)+pixelLine*2+1]
 
 		if sprite.xFlipped {
 			bit = 7 - (bit % 8)
@@ -294,7 +294,7 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 		spritePixelColor := (hi << 1) | lo
 		if spritePixelColor != 0x00 {
 			pixelColor = spritePixelColor
-			pixelPalette = p.GetPaletteSprite(spritesInTile[i].palette)
+			pixelPalette = p.GetPaletteSprite(sprite.palette)
 			break
 		}
 
@@ -322,7 +322,7 @@ func (p *PPU) fillBuffer() {
 	// Sprite Data
 	spritesInTile := []Sprite{}
 	for i := 0; i < len(p.spritesInLine) && len(spritesInTile) < 3; i++ {
-		spriteX := uint16(p.spritesInLine[i].xPos)
+		spriteX := uint16(p.spritesInLine[i].xPos) - 8
 		//check if sprite is inside this tile
 		if (spriteX >= p.pixels && spriteX < p.pixels+8) || (spriteX+8 >= p.pixels && spriteX+8 < p.pixels+8) {
 			spritesInTile = append(spritesInTile, p.spritesInLine[i])
