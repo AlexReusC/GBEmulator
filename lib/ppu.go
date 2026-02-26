@@ -195,7 +195,7 @@ func (p *PPU) SetMode(m PPUMode) {
 }
 
 func (p *PPU) GetColor(colorPixel uint8, palettePixel Palette) color.RGBA {
-	colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {40, 40, 40, 1}, {0, 0, 0, 1}}
+	colors := []color.RGBA{{0xFF, 0xFF, 0xFF, 1}, {0xC0, 0xC0, 0xC0, 1}, {0x55, 0x55, 0x55, 1}, {0, 0, 0, 1}}
 	var paletteData uint8
 
 	switch palettePixel {
@@ -263,9 +263,10 @@ func (p *PPU) UpdateLy() {
 	}
 }
 
-func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uint8, Palette) {
+func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uint8, Palette, bool) {
 	pixelColor := uint8(0x00)
 	var pixelPalette Palette
+	priority := false
 
 	for i := 0; i < len(spritesInTile); i++ {
 		sprite := spritesInTile[i]
@@ -295,11 +296,12 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 		if spritePixelColor != 0x00 {
 			pixelColor = spritePixelColor
 			pixelPalette = p.GetPaletteSprite(sprite.palette)
+			priority = sprite.priority
 			break
 		}
 
 	}
-	return pixelColor, pixelPalette
+	return pixelColor, pixelPalette, priority
 }
 
 func (p *PPU) fillBuffer() {
@@ -340,7 +342,8 @@ func (p *PPU) fillBuffer() {
 		}
 
 		if p.GetObjEnable() {
-			if color, palette := p.getSpritePixelData(x, bit, spritesInTile); color != 0x00 {
+			color, palette, priority := p.getSpritePixelData(x, bit, spritesInTile)
+			if color != 0x00 && (!priority || pixel.color == 0x00) {
 				pixel.color = color
 				pixel.palette = palette
 			}
