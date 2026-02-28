@@ -169,13 +169,14 @@ func (p *PPU) GetBGTileArea() uint16 {
 	*/
 	return 0x1800
 }
-func (p *PPU) GetAdditionalObjHeight() uint8 {
-	if BitIsSet(p.lcdControl, 2) {
-		return 0
-	} else {
+func (p *PPU) GetObjectAdditionalHeight() uint8 {
+	if p.IsObjectSizeModified() {
 		return 8
 	}
+	return 0
 }
+
+func (p *PPU) IsObjectSizeModified() bool { return BitIsSet(p.lcdControl, 2) }
 
 // Toggles if object will appear
 func (p *PPU) GetObjEnable() bool { return BitIsSet(p.lcdControl, 1) }
@@ -220,23 +221,25 @@ func (p *PPU) GetPaletteSprite(dmgP bool) Palette {
 
 func (p *PPU) GetSpritesInLine(lineY uint8) []Sprite {
 	spritesInLine := []Sprite{}
-	//spriteAdditionalHeight := p.GetAdditionalObjHeight() TODO: add
+	spriteAdditionalHeight := p.GetObjectAdditionalHeight()
 
 	for i := 0; i < 40; i++ {
 		spriteY, spriteX, spriteIndex, spriteFlags := p.oam[i*4], p.oam[i*4+1], p.oam[i*4+2], p.oam[i*4+3]
+		if p.IsObjectSizeModified() {
+			spriteIndex = spriteIndex & 0xFE //ignores bit 0
+		}
 		//sprite is touching y
 		lowerBound := p.ly + 8
 		upperBound := p.ly + 16
-		if !((lowerBound < spriteY) && (upperBound >= spriteY)) {
-			continue
+
+		if lowerBound < spriteY+spriteAdditionalHeight && upperBound >= spriteY {
+			palette := (spriteFlags & dmgPaletteBit) != 0
+			priority := (spriteFlags & priorityMaskBit) != 0
+			yFlipped := (spriteFlags & yFlipBit) != 0
+			xFlipped := (spriteFlags & xFlipBit) != 0
+
+			spritesInLine = append(spritesInLine, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
 		}
-
-		palette := (spriteFlags & dmgPaletteBit) != 0
-		priority := (spriteFlags & priorityMaskBit) != 0
-		yFlipped := (spriteFlags & yFlipBit) != 0
-		xFlipped := (spriteFlags & xFlipBit) != 0
-
-		spritesInLine = append(spritesInLine, Sprite{spriteY, spriteX, spriteIndex, palette, xFlipped, yFlipped, priority})
 	}
 
 	sort.SliceStable(spritesInLine, func(i, j int) bool {
@@ -264,6 +267,7 @@ func (p *PPU) UpdateLy() {
 }
 
 func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uint8, Palette, bool) {
+	spriteAdditionalHeight := uint16(p.GetObjectAdditionalHeight())
 	pixelColor := uint8(0x00)
 	var pixelPalette Palette
 	priority := false
@@ -279,11 +283,12 @@ func (p *PPU) getSpritePixelData(x uint16, bit int, spritesInTile []Sprite) (uin
 
 		pixelLine := uint16(p.ly + 16 - sprite.yPos)
 		if sprite.yFlipped {
-			pixelLine = 7 - (pixelLine % 8)
+			pixelLine = (7 + spriteAdditionalHeight) - pixelLine
 		}
 
-		spritePixelsLo := p.vram[(uint16(sprite.tileIndex)*16)+pixelLine*2]
-		spritePixelsHi := p.vram[(uint16(sprite.tileIndex)*16)+pixelLine*2+1]
+		finalTile := uint16(sprite.tileIndex)
+		spritePixelsLo := p.vram[(finalTile*16)+pixelLine*2]
+		spritePixelsHi := p.vram[(finalTile*16)+pixelLine*2+1]
 
 		if sprite.xFlipped {
 			bit = 7 - (bit % 8)
@@ -394,6 +399,7 @@ func (p *PPU) Update(cycles int) {
 			p.pixels = 0
 			p.SetMode(PixelTransfer)
 			p.spritesInLine = p.GetSpritesInLine(p.ly)
+			//fmt.Println(p.ly, p.spritesInLine)
 		}
 	case PixelTransfer: // 43 clocks
 		if p.pixels%8 == 0 {
