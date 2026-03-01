@@ -161,12 +161,10 @@ func (p *PPU) GetWindowEnable() bool { return BitIsSet(p.lcdControl, 5) }
 func (p *PPU) GetBGWindowTileArea() bool {
 	return BitIsSet(p.lcdControl, 4)
 }
-func (p *PPU) GetBGTileArea() uint16 {
-	/*
-		if BitIsSet(p.lcdControl, 3) {
-			return 0x1C00
-		}
-	*/
+func (p *PPU) GetBGTileMapArea() uint16 {
+	if BitIsSet(p.lcdControl, 3) {
+		return 0x1C00
+	}
 	return 0x1800
 }
 func (p *PPU) GetObjectAdditionalHeight() uint8 {
@@ -320,11 +318,19 @@ func (p *PPU) fillBuffer() {
 	mapX := x / 8
 	mapY := y / 8
 
-	tileId := uint16(p.vram[p.GetBGTileArea()+uint16(mapX)+(uint16(mapY)*32)])
+	tileIndex := uint16(p.vram[p.GetBGTileMapArea()+uint16(mapX)+(uint16(mapY)*32)])
+
+	tileAddress := uint16(0)
+	if p.GetBGWindowTileArea() {
+		tileAddress = tileIndex * 16
+	} else {
+		signedIndex := int8(tileIndex)
+		tileAddress = uint16(int16(signedIndex)*16) + 0x1000
+	}
 
 	var tileData [2]uint8
-	tileData[0] = p.vram[(uint16(tileId)*16)+((uint16(y)%8)*2)]
-	tileData[1] = p.vram[(uint16(tileId)*16)+((uint16(y)%8)*2)+1]
+	tileData[0] = p.vram[tileAddress+((uint16(y)%8)*2)]
+	tileData[1] = p.vram[tileAddress+((uint16(y)%8)*2)+1]
 
 	// Sprite Data
 	spritesInTile := []Sprite{}
@@ -341,8 +347,9 @@ func (p *PPU) fillBuffer() {
 		pixel := PixelData{color: uint8(0x00), palette: Bgp}
 
 		if p.GetBGWindowEnable() {
-			lo := (tileData[0] & (1 << bit)) >> (bit)
-			hi := (tileData[1] & (1 << bit)) >> (bit)
+			bgx := bit
+			lo := (tileData[0] & (1 << bgx)) >> (bgx)
+			hi := (tileData[1] & (1 << bgx)) >> (bgx)
 			pixel.color = (hi << 1) | lo
 		}
 
